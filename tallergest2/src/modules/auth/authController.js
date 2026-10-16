@@ -23,7 +23,7 @@ async function login(req, res) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
-    const usuario = rows;
+    const usuario = rows[0];
 
     // Verificar contraseña (soporta hash BCrypt)
     const esValido = await verificarClave(clave, usuario.clave);

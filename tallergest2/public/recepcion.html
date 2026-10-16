@@ -115,9 +115,9 @@
       const select = document.getElementById('recVehiculoId');
       select.innerHTML = '';
       for (const c of clientes) {
-        const resV = await fetch(`/api/clientes/${[se quitó el vínculo sospechoso]}/vehiculos`);
+        const resV = await fetch(`/api/clientes/${c.cliente_id}/vehiculos`);
         const vehs = await resV.json();
-        vehs.forEach(v => { select.innerHTML += `<option value="${[se quitó el vínculo sospechoso]}">${v.placa} - ${v.marca} ${v.modelo} (${c.nombre})</option>`; });
+        vehs.forEach(v => { select.innerHTML += `<option value="${v.vehiculo_id}">${v.placa} - ${v.marca} ${v.modelo} (${c.nombre})</option>`; });
       }
     }
 

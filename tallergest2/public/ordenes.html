@@ -118,7 +118,7 @@
       const res = await fetch('/api/ordenes/mecanicos');
       const mecs = await res.json();
       const lista = document.getElementById('listaMecanicos');
-      lista.innerHTML = [se quitó el vínculo sospechoso](m => `<li class="list-group-item d-flex justify-content-between"><strong>${m.nombre}</strong><small>${m.especialidad}</small></li>`).join('');
+      lista.innerHTML = mecs.map(m => `<li class="list-group-item d-flex justify-content-between"><strong>${m.nombre}</strong><small>${m.especialidad}</small></li>`).join('');
     }
 
     document.getElementById('formMecanico').addEventListener('submit', async (e) => {
@@ -133,7 +133,7 @@
       const res = await fetch('/api/ordenes/mecanicos');
       const mecs = await res.json();
       const sel = document.getElementById('asigMecanicoId');
-      sel.innerHTML = [se quitó el vínculo sospechoso](m => `<option value="${[se quitó el vínculo sospechoso]}">${m.nombre} - ${m.especialidad}</option>`).join('');
+      sel.innerHTML = mecs.map(m => `<option value="${m.mecanico_id}">${m.nombre} - ${m.especialidad}</option>`).join('');
       new bootstrap.Modal(document.getElementById('modalAsignar')).show();
     }
 

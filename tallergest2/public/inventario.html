@@ -105,13 +105,13 @@
     async function cargarServicios() {
       const res = await fetch('/api/inventario/servicios');
       const srvs = await res.json();
-      document.getElementById('tablaServicios').innerHTML = [se quitó el vínculo sospechoso](s => `<tr><td>#${[se quitó el vínculo sospechoso]}</td><td class="fw-bold">${s.nombre}</td><td>$${parseFloat(s.costo_mano_obra).toFixed(2)}</td></tr>`).join('');
+      document.getElementById('tablaServicios').innerHTML = srvs.map(s => `<tr><td>#${s.id}</td><td class="fw-bold">${s.nombre}</td><td>$${parseFloat(s.costo_mano_obra).toFixed(2)}</td></tr>`).join('');
     }
 
     async function cargarRepuestos() {
       const res = await fetch('/api/inventario/repuestos');
       const reps = await res.json();
-      document.getElementById('tablaRepuestos').innerHTML = [se quitó el vínculo sospechoso](r => `<tr><td>#${[se quitó el vínculo sospechoso]}</td><td class="fw-bold">${r.nombre}</td><td><span class="badge bg-success">${r.existencia} unid.</span></td><td>$${parseFloat(r.precio_unitario).toFixed(2)}</td></tr>`).join('');
+      document.getElementById('tablaRepuestos').innerHTML = reps.map(r => `<tr><td>#${r.id}</td><td class="fw-bold">${r.nombre}</td><td><span class="badge bg-success">${r.existencia} unid.</span></td><td>$${parseFloat(r.precio_unitario).toFixed(2)}</td></tr>`).join('');
     }
 
     document.getElementById('formServicio').addEventListener('submit', async (e) => {

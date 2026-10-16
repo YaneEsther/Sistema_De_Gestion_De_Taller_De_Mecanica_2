@@ -107,13 +107,13 @@
             <td>#OT-${c.orden_id}</td>
             <td>${c.cliente_nombre}</td>
             <td>${c.marca} ${c.modelo} (${c.placa})</td>
-            <td class="fw-bold text-success">$${parseFloat([se quitó el vínculo sospechoso]).toFixed(2)}</td>
-            <td>${c.factura_id ? `<span class="badge bg-success">Factura #\${c.factura_id}</span>` : '<span class="badge bg-warning text-dark">Pendiente</span>'}</td>
+            <td class="fw-bold text-success">$${parseFloat(c.monto_total).toFixed(2)}</td>
+            <td>${c.factura_id ? `<span class="badge bg-success">Factura #${c.factura_id}</span>` : '<span class="badge bg-warning text-dark">Pendiente</span>'}</td>
             <td>
               ${!c.factura_id ? `
-                <button class="btn btn-sm btn-gold me-1 py-1 px-2" onclick="facturarCotizacion(\${c.cotizacion_id})">Facturar</button>
+                <button class="btn btn-sm btn-gold me-1 py-1 px-2" onclick="facturarCotizacion(${c.cotizacion_id})">Facturar</button>
               ` : `
-                <button class="btn btn-sm btn-azul py-1 px-2" onclick="abrirModalPago(\\({c.factura_id}, \\){[se quitó el vínculo sospechoso]})">Registrar Pago</button>
+                <button class="btn btn-sm btn-azul py-1 px-2" onclick="abrirModalPago(${c.factura_id}, ${c.monto_total})">Registrar Pago</button>
               `}
             </td>
           </tr>
@@ -124,7 +124,7 @@
     async function cargarOrdenesCotizar() {
       const res = await fetch('/api/ordenes');
       const ords = await res.json();
-      document.getElementById('cotOrdenId').innerHTML = [se quitó el vínculo sospechoso](o => `<option value="${o.orden_id}">#OT-${o.orden_id} - ${o.marca} ${o.modelo} (${o.cliente_nombre})</option>`).join('');
+      document.getElementById('cotOrdenId').innerHTML = ords.map(o => `<option value="${o.orden_id}">#OT-${o.orden_id} - ${o.marca} ${o.modelo} (${o.cliente_nombre})</option>`).join('');
     }
 
     document.getElementById('formCotizar').addEventListener('submit', async (e) => {

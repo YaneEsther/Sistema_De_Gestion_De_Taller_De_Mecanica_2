@@ -9,6 +9,7 @@ const recepcionRoutes = require('./modules/recepcion/recepcionRoutes');
 const ordenRoutes = require('./modules/ordenes/ordenRoutes');
 const inventarioRoutes = require('./modules/inventario/inventarioRoutes');
 const cotizacionRoutes = require('./modules/cotizaciones/cotizacionRoutes');
+const userRoutes = require('./modules/auth/userRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -25,10 +26,11 @@ app.use('/api/recepcion', recepcionRoutes);
 app.use('/api/ordenes', ordenRoutes);
 app.use('/api/inventario', inventarioRoutes);
 app.use('/api/cotizaciones', cotizacionRoutes);
+app.use('/api/users', userRoutes);
 
 // Servidor escuchando
 app.listen(PORT, () => {
   console.log(`=================================`);
-  console.log(` TallerGest v2 ejecutándose en: http://localhost:${PORT}`);
+  console.log(` TallerGest v2 ejecutándose en: http://localhost:${PORT}/login.html`);
   console.log(`=================================`);
 });

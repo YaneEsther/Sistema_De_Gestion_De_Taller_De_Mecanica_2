@@ -105,13 +105,13 @@
       clientes.forEach(c => {
         tbody.innerHTML += `
           <tr>
-            <td>#${[se quitó el vínculo sospechoso]}</td>
+            <td>#${c.id}</td>
             <td class="fw-bold">${c.nombre}</td>
             <td>${c.telefono}</td>
             <td>${c.correo}</td>
             <td>
-              <button class="btn btn-sm btn-gold py-1 px-2" onclick="abrirModalVehiculo(${[se quitó el vínculo sospechoso]})">+ Vehículo</button>
-              <button class="btn btn-sm btn-outline-primary py-1 px-2" onclick="verVehiculos(${[se quitó el vínculo sospechoso]})">Ver Vehículos</button>
+              <button class="btn btn-sm btn-gold py-1 px-2" onclick="abrirModalVehiculo(${c.id})">+ Vehículo</button>
+              <button class="btn btn-sm btn-outline-primary py-1 px-2" onclick="verVehiculos(${c.id})">Ver Vehículos</button>
             </td>
           </tr>
         `;
@@ -138,7 +138,7 @@
       const res = await fetch(`/api/clientes/${id}/vehiculos`);
       const vehs = await res.json();
       if (vehs.length === 0) return alert('Sin vehículos registrados');
-      alert('Vehículos:\n' + [se quitó el vínculo sospechoso](v => `${v.marca} ${v.modelo} (${v.anio}) - Placa: ${v.placa}`).join('\n'));
+      alert('Vehículos:\n' + vehs.map(v => `${v.marca} ${v.modelo} (${v.anio}) - Placa: ${v.placa}`).join('\n'));
     }
 
     cargarClientes();

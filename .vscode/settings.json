@@ -14,5 +14,8 @@
             "database": "tallergest_v2_db",
             "username": "root"
         }
+    ],
+    "cSpell.words": [
+        "tallergest"
     ]
 }
