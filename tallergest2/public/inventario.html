@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TallerGest v2 - Inventario & Servicios</title>
+  <link href="[suspicious link removed]" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="#">TallerGest v2</a>
+      <div class="navbar-nav ms-auto">
+        <a class="nav-link" href="/clientes.html">Clientes & Vehículos</a>
+        <a class="nav-link" href="/recepcion.html">Recepción & Diagnóstico</a>
+        <a class="nav-link" href="/ordenes.html">Órdenes de Trabajo</a>
+        <a class="nav-link active" href="/inventario.html">Inventario & Servicios</a>
+        <a class="nav-link text-danger" href="#" onclick="logout()">Cerrar Sesión</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="row mb-4">
+      <!-- Sección Servicios -->
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Servicios (Mano de Obra)</h5>
+            <button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#modalServicio">+ Nuevo Servicio</button>
+          </div>
+          <div class="card-body">
+            <table class="table table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Descripción del Servicio</th>
+                  <th>Costo Estándar</th>
+                </tr>
+              </thead>
+              <tbody id="tablaServicios">
+                <!-- Carga dinámica -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sección Repuestos -->
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Inventario de Repuestos</h5>
+            <button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#modalRepuesto">+ Nuevo Repuesto</button>
+          </div>
+          <div class="card-body">
+            <table class="table table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Nombre del Repuesto</th>
+                  <th>Existencia</th>
+                  <th>Precio Unitario</th>
+                </tr>
+              </thead>
+              <tbody id="tablaRepuestos">
+                <!-- Carga dinámica -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Nuevo Servicio -->
+  <div class="modal fade" id="modalServicio" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Registrar Nuevo Servicio</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="formServicio">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">Nombre del Servicio</label>
+              <input type="text" id="srvNombre" class="form-control" placeholder="Ej: Cambio de Aceite y Filtro" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Costo Mano de Obra (\$)</label>
+              <input type="number" step="0.01" id="srvCosto" class="form-control" placeholder="1500.00" required>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-primary">Guardar Servicio</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Nuevo Repuesto -->
+  <div class="modal fade" id="modalRepuesto" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Ingresar Repuesto al Inventario</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="formRepuesto">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">Nombre / Descripción del Repuesto</label>
+              <input type="text" id="repNombre" class="form-control" placeholder="Ej: Pastillas de Freno Delanteras" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Cantidad Inicial (Existencia)</label>
+              <input type="number" id="repExistencia" class="form-control" placeholder="10" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Precio Unitario (\$)</label>
+              <input type="number" step="0.01" id="repPrecio" class="form-control" placeholder="2500.00" required>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-success">Ingresar al Stock</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="[suspicious link removed]"></script>
+  <script>
+    async function cargarServicios() {
+      const res = await fetch('/api/inventario/servicios');
+      const servicios = await res.json();
+      const tbody = document.getElementById('tablaServicios');
+      tbody.innerHTML = '';
+
+      servicios.forEach(s => {
+        tbody.innerHTML += `
+          <tr>
+            <td>#${s.id}</td>
+            <td class="fw-bold">${s.nombre}</td>
+            <td>$${parseFloat(s.costo_mano_obra).toFixed(2)}</td>
+          </tr>
+        `;
+      });
+    }
+
+    async function cargarRepuestos() {
+      const res = await fetch('/api/inventario/repuestos');
+      const repuestos = await res.json();
+      const tbody = document.getElementById('tablaRepuestos');
+      tbody.innerHTML = '';
+
+      repuestos.forEach(r => {
+        const badgeColor = r.existencia > 5 ? 'bg-success' : (r.existencia > 0 ? 'bg-warning text-dark' : 'bg-danger');
+        
+        tbody.innerHTML += `
+          <tr>
+            <td>#${r.id}</td>
+            <td class="fw-bold">${r.nombre}</td>
+            <td><span class="badge ${badgeColor}">${r.existencia} unid.</span></td>
+            <td>$${parseFloat(r.precio_unitario).toFixed(2)}</td>
+          </tr>
+        `;
+      });
+    }
+
+    document.getElementById('formServicio').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        nombre: document.getElementById('srvNombre').value,
+        costo_mano_obra: document.getElementById('srvCosto').value
+      };
+
+      const res = await fetch('/api/inventario/servicios', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        bootstrap.Modal.getInstance(document.getElementById('modalServicio')).hide();
+        document.getElementById('formServicio').reset();
+        cargarServicios();
+      } else {
+        alert('Error al guardar el servicio');
+      }
+    });
+
+    document.getElementById('formRepuesto').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        nombre: document.getElementById('repNombre').value,
+        existencia: document.getElementById('repExistencia').value,
+        precio_unitario: document.getElementById('repPrecio').value
+      };
+
+      const res = await fetch('/api/inventario/repuestos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        bootstrap.Modal.getInstance(document.getElementById('modalRepuesto')).hide();
+        document.getElementById('formRepuesto').reset();
+        cargarRepuestos();
+      } else {
+        alert('Error al registrar repuesto');
+      }
+    });
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = '/login.html';
+    }
+
+    cargarServicios();
+    cargarRepuestos();
+  </script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TallerGest v2 - Inicio de Sesión</title>
+  <link href="[suspicious link removed]" rel="stylesheet">
+  <style>
+    body { background-color: #f4f6f9; display: flex; align-items: center; justify-content: center; height: 100vh; }
+    .card-login { width: 100%; max-width: 400px; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .btn-primary { background-color: #0d6efd; border: none; }
+  </style>
+</head>
+<body>
+
+  <div class="card card-login bg-white">
+    <div class="text-center mb-4">
+      <h3 class="fw-bold text-primary">TallerGest v2</h3>
+      <p class="text-muted fs-7">Sistema de Gestión de Taller Mecánico</p>
+    </div>
+
+    <div id="alertBox" class="alert alert-danger d-none" role="alert"></div>
+
+    <form id="loginForm">
+      <div class="mb-3">
+        <label for="usuario" class="form-label font-weight-bold">Usuario</label>
+        <input type="text" class="form-control" id="usuario" placeholder="Ej: admin" required>
+      </div>
+      <div class="mb-3">
+        <label for="clave" class="form-label">Contraseña</label>
+        <input type="password" class="form-control" id="clave" placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">Ingresar al Sistema</button>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const alertBox = document.getElementById('alertBox');
+      alertBox.classList.add('d-none');
+
+      const nombre_usuario = document.getElementById('usuario').value;
+      const clave = document.getElementById('clave').value;
+
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre_usuario, clave })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          alertBox.textContent = data.error || 'Error al iniciar sesión';
+          alertBox.classList.remove('d-none');
+          return;
+        }
+
+        // Guardar Token en LocalStorage
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('usuario', JSON.stringify(data.usuario));
+
+        alert(`¡Bienvenido ${data.usuario.nombre_usuario} (${data.usuario.rol})!`);
+        // Redireccionar al panel principal
+        window.location.href = '/dashboard.html';
+      } catch (err) {
+        alertBox.textContent = 'No se pudo conectar con el servidor';
+        alertBox.classList.remove('d-none');
+      }
+    });
+  </script>
+</body>
+</html>

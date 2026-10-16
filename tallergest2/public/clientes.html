@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TallerGest v2 - Gestión de Clientes y Vehículos</title>
+  <link href="[suspicious link removed]" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="#">TallerGest v2</a>
+      <div class="navbar-nav ms-auto">
+        <a class="nav-link active" href="/clientes.html">Clientes & Vehículos</a>
+        <a class="nav-link text-danger" href="#" onclick="logout()">Cerrar Sesión</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2>Gestión de Clientes y Vehículos</h2>
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCliente">
+        + Nuevo Cliente
+      </button>
+    </div>
+
+    <!-- Tabla de Clientes -->
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <table class="table table-hover align-middle">
+          <thead class="table-dark">
+            <tr>
+              <th>ID</th>
+              <th>Nombre</th>
+              <th>Teléfono</th>
+              <th>Correo</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tablaClientes">
+            <!-- Carga dinámica -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Nuevo Cliente -->
+  <div class="modal fade" id="modalCliente" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Registrar Nuevo Cliente</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="formCliente">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">Nombre Completo</label>
+              <input type="text" id="cliNombre" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Teléfono</label>
+              <input type="text" id="cliTelefono" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Correo Electrónico</label>
+              <input type="email" id="cliCorreo" class="form-control" required>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-success">Guardar Cliente</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Agregar Vehículo -->
+  <div class="modal fade" id="modalVehiculo" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Agregar Vehículo a Cliente</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="formVehiculo">
+          <input type="hidden" id="vehClienteId">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">Placa / Matrícula</label>
+              <input type="text" id="vehPlaca" class="form-control" placeholder="ABC-123" required>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Marca</label>
+                <input type="text" id="vehMarca" class="form-control" placeholder="Toyota" required>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Modelo</label>
+                <input type="text" id="vehModelo" class="form-control" placeholder="Corolla" required>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Año</label>
+              <input type="number" id="vehAnio" class="form-control" placeholder="2020" required>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-primary">Registrar Vehículo</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="[suspicious link removed]"></script>
+  <script>
+    async function cargarClientes() {
+      const res = await fetch('/api/clientes');
+      const clientes = await res.json();
+      const tbody = document.getElementById('tablaClientes');
+      tbody.innerHTML = '';
+
+      clientes.forEach(c => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${[se quitó el vínculo sospechoso]}</td>
+            <td class="fw-bold">${c.nombre}</td>
+            <td>${c.telefono}</td>
+            <td>${c.correo}</td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary" onclick="abrirModalVehiculo(${[se quitó el vínculo sospechoso]})">+ Vehículo</button>
+              <button class="btn btn-sm btn-outline-info" onclick="verVehiculos(${[se quitó el vínculo sospechoso]})">Ver Vehículos</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    document.getElementById('formCliente').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        nombre: document.getElementById('cliNombre').value,
+        telefono: document.getElementById('cliTelefono').value,
+        correo: document.getElementById('cliCorreo').value
+      };
+
+      const res = await fetch('/api/clientes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        bootstrap.Modal.getInstance(document.getElementById('modalCliente')).hide();
+        document.getElementById('formCliente').reset();
+        cargarClientes();
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Error al guardar cliente');
+      }
+    });
+
+    function abrirModalVehiculo(clienteId) {
+      document.getElementById('vehClienteId').value = clienteId;
+      new bootstrap.Modal(document.getElementById('modalVehiculo')).show();
+    }
+
+    document.getElementById('formVehiculo').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        cliente_id: document.getElementById('vehClienteId').value,
+        placa: document.getElementById('vehPlaca').value,
+        marca: document.getElementById('vehMarca').value,
+        modelo: document.getElementById('vehModelo').value,
+        anio: document.getElementById('vehAnio').value
+      };
+
+      const res = await fetch('/api/clientes/vehiculos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        bootstrap.Modal.getInstance(document.getElementById('modalVehiculo')).hide();
+        document.getElementById('formVehiculo').reset();
+        alert('Vehículo asignado correctamente');
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Error al registrar vehículo');
+      }
+    });
+
+    async function verVehiculos(clienteId) {
+      const res = await fetch(`/api/clientes/${clienteId}/vehiculos`);
+      const vehiculos = await res.json();
+      if (vehiculos.length === 0) {
+        alert('Este cliente no tiene vehículos registrados.');
+        return;
+      }
+      const lista = [se quitó el vínculo sospechoso](v => `${v.marca} ${v.modelo} (${v.anio}) - Placa: ${v.placa}`).join('\n');
+      alert(`Vehículos del Cliente:\n\n${lista}`);
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = '/login.html';
+    }
+
+    cargarClientes();
+  </script>
+</body>
+</html>

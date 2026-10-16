@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TallerGest v2 - Cotizaciones & Facturación</title>
+  <link href="[suspicious link removed]" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="#">TallerGest v2</a>
+      <div class="navbar-nav ms-auto">
+        <a class="nav-link" href="/clientes.html">Clientes & Vehículos</a>
+        <a class="nav-link" href="/recepcion.html">Recepción & Diagnóstico</a>
+        <a class="nav-link" href="/ordenes.html">Órdenes</a>
+        <a class="nav-link" href="/inventario.html">Inventario</a>
+        <a class="nav-link active" href="/facturacion.html">Facturación & Pagos</a>
+        <a class="nav-link text-danger" href="#" onclick="logout()">Cerrar Sesión</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2>Cotizaciones, Facturación & Cobros</h2>
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCotizar" onclick="cargarOrdenesParaCotizar()">
+        + Generar Cotización
+      </button>
+    </div>
+
+    <!-- Tabla de Cotizaciones -->
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <table class="table table-hover align-middle">
+          <thead class="table-dark">
+            <tr>
+              <th>Cotización #</th>
+              <th>Orden #</th>
+              <th>Cliente</th>
+              <th>Vehículo</th>
+              <th>Monto Total</th>
+              <th>Estado Factura</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tablaCotizaciones">
+            <!-- Carga dinámica -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Generar Cotización -->
+  <div class="modal fade" id="modalCotizar" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Nueva Cotización de Orden</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="formCotizar">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">Seleccionar Orden de Trabajo</label>
+              <select id="cotOrdenId" class="form-select" required>
+                <!-- Carga dinámica de órdenes -->
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Vigencia (Días)</label>
+              <input type="number" id="cotVigencia" class="form-control" value="15" required>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-success">Calcular y Generar Cotización</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Registrar Pago -->
+  <div class="modal fade" id="modalPago" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Registrar Cobro de Factura</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="formPago">
+          <input type="hidden" id="pagoFacturaId">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">Monto a Cobrar (\$)</label>
+              <input type="number" step="0.01" id="pagoMonto" class="form-control" required readonly>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Método de Pago</label>
+              <select id="pagoMetodo" class="form-select" required>
+                <option value="Efectivo">Efectivo</option>
+                <option value="Tarjeta">Tarjeta de Crédito / Débito</option>
+                <option value="Transferencia">Transferencia Bancaria</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-success">Registrar Pago</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="[suspicious link removed]"></script>
+  <script>
+    async function cargarCotizaciones() {
+      const res = await fetch('/api/cotizaciones');
+      const cotizaciones = await res.json();
+      const tbody = document.getElementById('tablaCotizaciones');
+      tbody.innerHTML = '';
+
+      cotizaciones.forEach(c => {
+        tbody.innerHTML += `
+          <tr>
+            <td><strong>#COT-${c.cotizacion_id}</strong></td>
+            <td>#OT-${c.orden_id}</td>
+            <td>${c.cliente_nombre}</td>
+            <td>${c.marca} ${c.modelo} (${c.placa})</td>
+            <td class="fw-bold text-success">$${parseFloat(c.total).toFixed(2)}</td>
+            <td>
+              ${c.factura_id ? `<span class="badge bg-success">Factura #\${c.factura_id}</span>` : '<span class="badge bg-warning text-dark">Pendiente Facturar</span>'}
+            </td>
+            <td>
+              ${!c.factura_id ? `
+                <button class="btn btn-sm btn-outline-success me-1" onclick="aprobarCotizacion(\${c.cotizacion_id}, true)">✔ Aprobar</button>
+                <button class="btn btn-sm btn-primary" onclick="facturarCotizacion(\${c.cotizacion_id})">Facturar</button>
+              ` : `
+                <button class="btn btn-sm btn-outline-dark" onclick="abrirModalPago(\${c.factura_id}, \${c.total})">Registrar Pago</button>
+              `}
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    async function cargarOrdenesParaCotizar() {
+      const res = await fetch('/api/ordenes');
+      const ordenes = await res.json();
+      const select = document.getElementById('cotOrdenId');
+      select.innerHTML = '<option value="">Seleccione una orden...</option>';
+      ordenes.forEach(o => {
+        select.innerHTML += `<option value="${[se quitó el vínculo sospechoso]}">#OT-${o.orden_id} - ${o.marca} ${o.modelo} (${o.cliente_nombre})</option>`;
+      });
+    }
+
+    document.getElementById('formCotizar').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        orden_id: document.getElementById('cotOrdenId').value,
+        dias_vigencia: document.getElementById('cotVigencia').value
+      };
+
+      const res = await fetch('/api/cotizaciones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        bootstrap.Modal.getInstance(document.getElementById('modalCotizar')).hide();
+        cargarCotizaciones();
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Error al generar cotización');
+      }
+    });
+
+    async function aprobarCotizacion(cotizacion_id, aprobado) {
+      const res = await fetch('/api/cotizaciones/aprobar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cotizacion_id, aprobado })
+      });
+
+      if (res.ok) {
+        alert('Respuesta del cliente registrada');
+        cargarCotizaciones();
+      }
+    }
+
+    async function facturarCotizacion(cotizacion_id) {
+      const res = await fetch('/api/cotizaciones/facturar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cotizacion_id })
+      });
+
+      if (res.ok) {
+        alert('Factura emitida correctamente');
+        cargarCotizaciones();
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Error al emitir factura');
+      }
+    }
+
+    function abrirModalPago(factura_id, total) {
+      document.getElementById('pagoFacturaId').value = factura_id;
+      document.getElementById('pagoMonto').value = total;
+      new bootstrap.Modal(document.getElementById('modalPago')).show();
+    }
+
+    document.getElementById('formPago').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        factura_id: document.getElementById('pagoFacturaId').value,
+        monto: document.getElementById('pagoMonto').value,
+        metodo: document.getElementById('pagoMetodo').value
+      };
+
+      const res = await fetch('/api/cotizaciones/pagos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        bootstrap.Modal.getInstance(document.getElementById('modalPago')).hide();
+        alert('¡Pago registrado con éxito!');
+        cargarCotizaciones();
+      } else {
+        alert('Error al registrar pago');
+      }
+    });
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = '/login.html';
+    }
+
+    cargarCotizaciones();
+  </script>
+</body>
+</html>

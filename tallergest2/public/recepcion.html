@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TallerGest v2 - Recepción y Diagnóstico</title>
+  <link href="[suspicious link removed]" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="#">TallerGest v2</a>
+      <div class="navbar-nav ms-auto">
+        <a class="nav-link" href="/clientes.html">Clientes & Vehículos</a>
+        <a class="nav-link active" href="/recepcion.html">Recepción & Diagnóstico</a>
+        <a class="nav-link text-danger" href="#" onclick="logout()">Cerrar Sesión</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2>Recepción y Diagnóstico de Vehículos</h2>
+      <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalRecepcion" onclick="cargarVehiculosDisponibles()">
+        + Recibir Vehículo
+      </button>
+    </div>
+
+    <!-- Tabla de Recepciones -->
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <table class="table table-hover align-middle">
+          <thead class="table-dark">
+            <tr>
+              <th>ID Rec.</th>
+              <th>Fecha</th>
+              <th>Vehículo (Placa)</th>
+              <th>Cliente</th>
+              <th>Estado Orden</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tablaRecepciones">
+            <!-- Se carga dinámicamente -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Nueva Recepción -->
+  <div class="modal fade" id="modalRecepcion" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Registrar Entrada de Vehículo</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="formRecepcion">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">Seleccionar Vehículo</label>
+              <select id="recVehiculoId" class="form-select" required>
+                <option value="">Cargando vehículos...</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Observaciones Iniciales (Golpes, estado, solicitud del cliente)</label>
+              <textarea id="recObservaciones" class="form-control" rows="3" placeholder="Ej: Rayón en puerta derecha. Cliente reporta ruido al frenar."></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-success">Registrar Recepción</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Registrar Diagnóstico -->
+  <div class="modal fade" id="modalDiagnostico" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Diagnóstico Técnico</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="formDiagnostico">
+          <input type="hidden" id="diagRecepcionId">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">Hallazgos del Diagnóstico (Fallas detectadas y repuestos necesarios)</label>
+              <textarea id="diagHallazgos" class="form-control" rows="4" placeholder="Ej: Pastillas de freno desgastadas al 90%. Requiere cambio inmediato y rectificado de discos." required></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-primary">Guardar Diagnóstico</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="[suspicious link removed]"></script>
+  <script>
+    async function cargarRecepciones() {
+      const res = await fetch('/api/recepcion');
+      const recepciones = await res.json();
+      const tbody = document.getElementById('tablaRecepciones');
+      tbody.innerHTML = '';
+
+      recepciones.forEach(r => {
+        const fecha = new Date(r.fecha_recepcion).toLocaleString();
+        const badgeColor = r.orden_estado === 'recibida' ? 'bg-warning text-dark' : 'bg-info text-dark';
+        
+        tbody.innerHTML += `
+          <tr>
+            <td>#${r.recepcion_id}</td>
+            <td>${fecha}</td>
+            <td><strong>${r.marca} ${r.modelo}</strong> (${r.placa})</td>
+            <td>${r.cliente_nombre}</td>
+            <td><span class="badge ${badgeColor}">${r.orden_estado}</span></td>
+            <td>
+              ${!r.diagnostico_id ? 
+                `<button class="btn btn-sm btn-primary" onclick="abrirModalDiagnostico(\${r.recepcion_id})">+ Diagnóstico</button>` : 
+                `<button class="btn btn-sm btn-outline-secondary" onclick="verDiagnostico(\${r.recepcion_id})">Ver Diagnóstico</button>`
+              }
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    async function cargarVehiculosDisponibles() {
+      const res = await fetch('/api/clientes');
+      const clientes = await res.json();
+      const select = document.getElementById('recVehiculoId');
+      select.innerHTML = '<option value="">Seleccione un vehículo...</option>';
+
+      for (const c of clientes) {
+        const resVeh = await fetch(`/api/clientes/${[se quitó el vínculo sospechoso]}/vehiculos`);
+        const vehiculos = await resVeh.json();
+        vehiculos.forEach(v => {
+          select.innerHTML += `<option value="${[se quitó el vínculo sospechoso]}">${v.placa} - ${v.marca} ${v.modelo} (Cliente: ${c.nombre})</option>`;
+        });
+      }
+    }
+
+    document.getElementById('formRecepcion').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        vehiculo_id: document.getElementById('recVehiculoId').value,
+        observaciones: document.getElementById('recObservaciones').value
+      };
+
+      const res = await fetch('/api/recepcion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        bootstrap.Modal.getInstance(document.getElementById('modalRecepcion')).hide();
+        document.getElementById('formRecepcion').reset();
+        cargarRecepciones();
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Error al guardar la recepción');
+      }
+    });
+
+    function abrirModalDiagnostico(recepcionId) {
+      document.getElementById('diagRecepcionId').value = recepcionId;
+      new bootstrap.Modal(document.getElementById('modalDiagnostico')).show();
+    }
+
+    document.getElementById('formDiagnostico').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        recepcion_id: document.getElementById('diagRecepcionId').value,
+        hallazgos: document.getElementById('diagHallazgos').value
+      };
+
+      const res = await fetch('/api/recepcion/diagnostico', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        bootstrap.Modal.getInstance(document.getElementById('modalDiagnostico')).hide();
+        document.getElementById('formDiagnostico').reset();
+        cargarRecepciones();
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Error al guardar el diagnóstico');
+      }
+    });
+
+    async function verDiagnostico(recepcionId) {
+      const res = await fetch(`/api/recepcion/${recepcionId}/diagnostico`);
+      if (res.ok) {
+        const diag = await res.json();
+        alert(`Diagnóstico Técnico:\n\n${diag.hallazgos}`);
+      } else {
+        alert('No se pudo obtener el diagnóstico');
+      }
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = '/login.html';
+    }
+
+    cargarRecepciones();
+  </script>
+</body>
+</html>

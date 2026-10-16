@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TallerGest v2 - Panel Principal</title>
+  <link href="[suspicious link removed]" rel="stylesheet">
+  <link rel="stylesheet" href="[suspicious link removed]">
+  <style>
+    body { background-color: #f8f9fa; }
+    .kpi-card { border: none; border-radius: 12px; transition: transform 0.2s; }
+    .kpi-card:hover { transform: translateY(-3px); }
+    .module-card { border: none; border-radius: 10px; text-decoration: none; color: inherit; transition: all 0.2s; }
+    .module-card:hover { box-shadow: 0 4px 15px rgba(0,0,0,0.1); background-color: #ffffff; }
+  </style>
+</head>
+<body>
+
+  <!-- Barra de Navegación Superior -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="/dashboard.html">
+        <i class="bi bi-wrench-adjustable me-2"></i>TallerGest v2
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto align-items-center">
+          <li class="nav-item me-3">
+            <span class="text-light" id="userInfo">Cargando usuario...</span>
+          </li>
+          <li class="nav-item">
+            <button class="btn btn-outline-danger btn-sm" onclick="logout()">
+              <i class="bi bi-box-arrow-right me-1"></i>Cerrar Sesión
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+
+    <!-- Encabezado -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h2 class="fw-bold text-dark mb-0">Panel de Control General</h2>
+        <p class="text-muted small">Resumen operativo y métricas del taller en tiempo real</p>
+      </div>
+      <div>
+        <a href="/recepcion.html" class="btn btn-success fw-semibold">
+          <i class="bi bi-plus-lg me-1"></i>Nueva Recepción
+        </a>
+      </div>
+    </div>
+
+    <!-- Indicadores Clave (KPIs) -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-3">
+        <div class="card kpi-card bg-primary text-white p-3 shadow-sm">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <p class="mb-1 text-white-50 small">Clientes Registrados</p>
+              <h3 class="fw-bold mb-0" id="kpiClientes">0</h3>
+            </div>
+            <i class="bi bi-people fs-1 text-white-50"></i>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card kpi-card bg-warning text-dark p-3 shadow-sm">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <p class="mb-1 text-dark-50 small">Vehículos en Taller</p>
+              <h3 class="fw-bold mb-0" id="kpiVehiculos">0</h3>
+            </div>
+            <i class="bi bi-car-front fs-1 text-dark-50"></i>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card kpi-card bg-info text-white p-3 shadow-sm">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <p class="mb-1 text-white-50 small">Órdenes Activas</p>
+              <h3 class="fw-bold mb-0" id="kpiOrdenes">0</h3>
+            </div>
+            <i class="bi bi-clipboard-check fs-1 text-white-50"></i>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card kpi-card bg-success text-white p-3 shadow-sm">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <p class="mb-1 text-white-50 small">Cotizaciones Emitidas</p>
+              <h3 class="fw-bold mb-0" id="kpiCotizaciones">0</h3>
+            </div>
+            <i class="bi bi-currency-dollar fs-1 text-white-50"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accesos Rápidos a Módulos del Sistema -->
+    <h5 class="fw-bold mb-3 text-secondary">Módulos del Sistema</h5>
+    <div class="row g-3 mb-5">
+      <div class="col-md-4 col-lg-2.4">
+        <a href="/clientes.html" class="card module-card bg-white p-3 shadow-sm text-center h-100">
+          <i class="bi bi-person-vcard fs-2 text-primary mb-2"></i>
+          <h6 class="fw-bold mb-1">Clientes & Vehículos</h6>
+          <small class="text-muted">Gestión de propietarios y flotilla</small>
+        </a>
+      </div>
+      <div class="col-md-4 col-lg-2.4">
+        <a href="/recepcion.html" class="card module-card bg-white p-3 shadow-sm text-center h-100">
+          <i class="bi bi-box-arrow-in-right fs-2 text-warning mb-2"></i>
+          <h6 class="fw-bold mb-1">Recepción & Diagnóstico</h6>
+          <small class="text-muted">Entrada y evaluación técnica</small>
+        </a>
+      </div>
+      <div class="col-md-4 col-lg-2.4">
+        <a href="/ordenes.html" class="card module-card bg-white p-3 shadow-sm text-center h-100">
+          <i class="bi bi-tools fs-2 text-info mb-2"></i>
+          <h6 class="fw-bold mb-1">Órdenes de Trabajo</h6>
+          <small class="text-muted">Asignación y estado de avance</small>
+        </a>
+      </div>
+      <div class="col-md-4 col-lg-2.4">
+        <a href="/inventario.html" class="card module-card bg-white p-3 shadow-sm text-center h-100">
+          <i class="bi bi-boxes fs-2 text-danger mb-2"></i>
+          <h6 class="fw-bold mb-1">Inventario & Servicios</h6>
+          <small class="text-muted">Repuestos y mano de obra</small>
+        </a>
+      </div>
+      <div class="col-md-4 col-lg-2.4">
+        <a href="/facturacion.html" class="card module-card bg-white p-3 shadow-sm text-center h-100">
+          <i class="bi bi-receipt fs-2 text-success mb-2"></i>
+          <h6 class="fw-bold mb-1">Facturación & Pagos</h6>
+          <small class="text-muted">Cotización, facturas y cobros</small>
+        </a>
+      </div>
+    </div>
+
+    <!-- Tabla de Órdenes Recientes en Proceso -->
+    <div class="card shadow-sm border-0 mb-4">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0 text-dark">Últimas Órdenes de Trabajo</h5>
+        <a href="/ordenes.html" class="btn btn-sm btn-outline-primary">Ver Todas</a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>ID Orden</th>
+                <th>Vehículo</th>
+                <th>Cliente</th>
+                <th>Mecánico</th>
+                <th>Estado actual</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tablaOrdenesRecientes">
+              <!-- Carga dinámica -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="[suspicious link removed]"></script>
+  <script>
+    // Validar autenticación de usuario
+    const token = localStorage.getItem('token');
+    const usuarioStored = localStorage.getItem('usuario');
+
+    if (!token || !usuarioStored) {
+      window.location.href = '/login.html';
+    } else {
+      const user = JSON.parse(usuarioStored);
+      document.getElementById('userInfo').innerHTML = `
+        <i class="bi bi-person-circle me-1"></i><strong>${user.nombre_usuario}</strong> (${user.rol})
+      `;
+    }
+
+    async function cargarMetricasYOrdenes() {
+      try {
+        // Fetch paralelo para cargar KPIs
+        const [resClientes, resRecepciones, resOrdenes, resCotizaciones] = await Promise.all([
+          fetch('/api/clientes'),
+          fetch('/api/recepcion'),
+          fetch('/api/ordenes'),
+          fetch('/api/cotizaciones')
+        ]);
+
+        const clientes = await resClientes.json();
+        const recepciones = await resRecepciones.json();
+        const ordenes = await resOrdenes.json();
+        const cotizaciones = await resCotizaciones.json();
+
+        // Actualizar contadores KPI
+        document.getElementById('kpiClientes').textContent = clientes.length || 0;
+        document.getElementById('kpiVehiculos').textContent = recepciones.length || 0;
+        document.getElementById('kpiOrdenes').textContent = ordenes.filter(o => o.estado !== 'facturada' && o.estado !== 'finalizada').length || 0;
+        document.getElementById('kpiCotizaciones').textContent = cotizaciones.length || 0;
+
+        // Cargar últimas 5 órdenes
+        const tbody = document.getElementById('tablaOrdenesRecientes');
+        tbody.innerHTML = '';
+
+        const ordenesRecientes = ordenes.slice(0, 5);
+
+        if (ordenesRecientes.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-3">No hay órdenes registradas aún.</td></tr>`;
+          return;
+        }
+
+        ordenesRecientes.forEach(o => {
+          let badgeColor = 'bg-secondary';
+          if (o.estado === 'recibida') badgeColor = 'bg-warning text-dark';
+          if (o.estado === 'diagnosticada') badgeColor = 'bg-info text-dark';
+          if (o.estado === 'en_ejecucion') badgeColor = 'bg-primary';
+          if (o.estado === 'finalizada') badgeColor = 'bg-success';
+          if (o.estado === 'facturada') badgeColor = 'bg-dark';
+
+          tbody.innerHTML += `
+            <tr>
+              <td><strong>#OT-${o.orden_id}</strong></td>
+              <td>${o.marca} ${o.modelo} <span class="badge bg-light text-dark border">${o.placa}</span></td>
+              <td>${o.cliente_nombre}</td>
+              <td>${o.mecanico_nombre || '<span class="text-muted">Por asignar</span>'}</td>
+              <td><span class="badge ${badgeColor}">${o.estado}</span></td>
+              <td>
+                <a href="/ordenes.html" class="btn btn-sm btn-outline-secondary">Gestionar</a>
+              </td>
+            </tr>
+          `;
+        });
+
+      } catch (err) {
+        console.error('Error al cargar métricas:', err);
+      }
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = '/login.html';
+    }
+
+    cargarMetricasYOrdenes();
+  </script>
+</body>
+</html>
