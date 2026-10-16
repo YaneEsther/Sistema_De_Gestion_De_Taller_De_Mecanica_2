@@ -4,36 +4,41 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TallerGest v2 - Inicio de Sesión</title>
-  <link href="[suspicious link removed]" rel="stylesheet">
+ <link href="	https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.2/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/css/styles.css">
   <style>
-    body { background-color: #f4f6f9; display: flex; align-items: center; justify-content: center; height: 100vh; }
-    .card-login { width: 100%; max-width: 400px; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    .btn-primary { background-color: #0d6efd; border: none; }
+    body { background-color: #1F2937; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+    .card-login { width: 100%; max-width: 420px; padding: 35px; border-radius: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); background-color: #FFFFFF; }
   </style>
 </head>
 <body>
 
-  <div class="card card-login bg-white">
+  <div class="card card-login">
     <div class="text-center mb-4">
-      <h3 class="fw-bold text-primary">TallerGest v2</h3>
-      <p class="text-muted fs-7">Sistema de Gestión de Taller Mecánico</p>
+      <div class="d-inline-flex align-items-center justify-content-center bg-primary text-white rounded-circle mb-2" style="width: 60px; height: 60px; background-color: #1E3A6D !important; border: 3px solid #D18B00;">
+        <i class="bi bi-wrench-adjustable-circle fs-2"></i>
+      </div>
+      <h3 class="fw-bold text-dark mb-0">TallerGest v2</h3>
+      <p class="text-muted small">Sistema de Gestión de Taller Mecánico</p>
     </div>
 
     <div id="alertBox" class="alert alert-danger d-none" role="alert"></div>
 
     <form id="loginForm">
       <div class="mb-3">
-        <label for="usuario" class="form-label font-weight-bold">Usuario</label>
+        <label for="usuario" class="form-label fw-semibold">Usuario</label>
         <input type="text" class="form-control" id="usuario" placeholder="Ej: admin" required>
       </div>
       <div class="mb-3">
-        <label for="clave" class="form-label">Contraseña</label>
+        <label for="clave" class="form-label fw-semibold">Contraseña</label>
         <input type="password" class="form-control" id="clave" placeholder="••••••••" required>
       </div>
-      <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">Ingresar al Sistema</button>
+      <button type="submit" class="btn btn-gold w-100 py-2 mt-2">Ingresar al Sistema</button>
     </form>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -53,17 +58,13 @@
         const data = await response.json();
 
         if (!response.ok) {
-          alertBox.textContent = data.error || 'Error al iniciar sesión';
+          alertBox.textContent = data.error || 'Credenciales inválidas';
           alertBox.classList.remove('d-none');
           return;
         }
 
-        // Guardar Token en LocalStorage
         localStorage.setItem('token', data.token);
         localStorage.setItem('usuario', JSON.stringify(data.usuario));
-
-        alert(`¡Bienvenido ${data.usuario.nombre_usuario} (${data.usuario.rol})!`);
-        // Redireccionar al panel principal
         window.location.href = '/dashboard.html';
       } catch (err) {
         alertBox.textContent = 'No se pudo conectar con el servidor';
