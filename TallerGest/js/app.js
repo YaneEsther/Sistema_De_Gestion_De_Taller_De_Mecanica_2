@@ -14,7 +14,7 @@ historial:{t:'Historial de mantenimiento',i:'clock-history',r:[A,R,ME],f:[['vehi
 recepcion:{t:'Recepción del vehículo',i:'box-arrow-in-right',r:[A,R],f:[['vehiculo','Vehículo','ref','vehiculos'],['fecha','Fecha','date'],['km','Kilometraje','number'],['obs','Observaciones','textarea']]},
 diagnostico:{t:'Diagnóstico',i:'clipboard2-pulse',r:[A,ME],f:[['vehiculo','Vehículo','ref','vehiculos'],['resultado','Resultado','select',['Sin anomalías','Con fallas','Requiere revisión adicional']],['hallazgos','Descripción / hallazgos','textarea']]},
 ordenes:{t:'Órdenes de trabajo',i:'tools',r:[A,R,ME],f:[['codigo','N° de orden'],['cliente','Cliente','ref','clientes'],['vehiculo','Vehículo','ref','vehiculos'],['estado','Estado','select',ESTADOS],['fecha','Fecha','date']]},
-mecanicos:{t:'Asignación de mecánicos',i:'person-gear',r:[A],f:[['orden','Orden de trabajo','ref','ordenes'],['mecanico','Mecánico','ref','usuarios'],['fecha','Fecha de asignación','date']]},
+mecanicos:{t:'Asignación de mecánicos',i:'person-gear',r:[A],f:[['orden','Orden de trabajo','ref','ordenes'],['mecanico','Mecánico','ref','usuarios',x=>x.rol==ME&&x.estado=='Activo'],['fecha','Fecha de asignación','date']]},
 servicios:{t:'Gestión de servicios',i:'wrench-adjustable',r:[A,R],f:[['descripcion','Descripción'],['categoria','Categoría','select',['Mantenimiento','Reparación','Diagnóstico']],['precio','Precio (RD$)','number']]},
 repuestos:{t:'Gestión de repuestos',i:'gear',r:[A,ME],f:[['codigo','Código'],['descripcion','Descripción'],['stock','Stock','number'],['precio','Precio (RD$)','number']]},
 cotizaciones:{t:'Cotizaciones',i:'file-earmark-text',r:[A,R,F],f:[['orden','Orden de trabajo','ref','ordenes'],['descripcion','Servicio / repuesto'],['total','Total (RD$)','number'],['estado','Estado','select',['Pendiente','Aprobada','Rechazada']]]},
@@ -81,16 +81,32 @@ function cfg(){
 
 /* Cotizaciones: selección de servicios y repuestos con cálculo automático (ITBIS 18%) */
 const fmt=n=>Number(n).toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2});
-function cotBody(r){
- const it=r&&r.items||[],sel=(t,id)=>it.find(x=>x.t==t&&x.id==id);
+function cotBody(r,k){
+ const fac=k=='facturacion',it=r&&r.items||[],sel=(t,id)=>it.find(x=>x.t==t&&x.id==id);
  const row=(t,x)=>{const s=sel(t,x.id);return `<div class="d-flex align-items-center gap-2 border-bottom py-1"><input type="checkbox" class="form-check-input ci" data-t="${t}" data-id="${x.id}" data-d="${esc(x.descripcion)}" data-p="${x.precio||0}" ${s?'checked':''}><span class="flex-grow-1 small">${esc(x.descripcion)}${t=='r'?` <span class="text-muted">(stock ${esc(x.stock)})</span>`:''}</span>${t=='r'?`<input type="number" min="1" value="${s?s.c:1}" class="form-control form-control-sm cq" style="width:68px">`:''}<span class="text-nowrap small">RD$ ${fmt(x.precio||0)}</span></div>`};
- const lista=(t,k,vacio)=>get(k).length?get(k).map(x=>row(t,x)).join(''):`<div class="text-muted small py-2">${vacio}</div>`;
- const ords=get('ordenes');
- return `<div class="row g-2"><div class="col-md-8"><label class="form-label">Orden de trabajo</label><select name="orden" class="form-select" required><option value="">Seleccionar...</option>${ords.map(o=>`<option value="${o.id}" ${r&&o.id==r.orden?'selected':''}>${esc(o.codigo)} · ${esc(nm('clientes',o.cliente))}</option>`).join('')}</select></div>
- <div class="col-md-4"><label class="form-label">Estado</label><select name="estado" class="form-select">${['Pendiente','Aprobada','Rechazada'].map(o=>`<option ${r&&r.estado==o?'selected':''}>${o}</option>`).join('')}</select></div></div>
- <div class="row g-3 mt-1"><div class="col-md-6"><h6 class="mb-1">Servicios</h6><div style="max-height:220px;overflow:auto">${lista('s','servicios','No hay servicios. Créalos en «Gestión de servicios».')}</div></div>
+ const lista=(t,k2,vacio)=>get(k2).length?get(k2).map(x=>row(t,x)).join(''):`<div class="text-muted small py-2">${vacio}</div>`;
+ const ordSel=`<select name="orden" class="form-select" required><option value="">Seleccionar...</option>${get('ordenes').map(o=>`<option value="${o.id}" ${r&&o.id==r.orden?'selected':''}>${esc(o.codigo)} · ${esc(nm('clientes',o.cliente))}</option>`).join('')}</select>`;
+ const nums=get('facturacion').map(x=>parseInt(String(x.numero).replace(/\D/g,''))||0);
+ const cab=fac?`<div class="row g-2"><div class="col-md-3"><label class="form-label">N° de factura</label><input name="numero" class="form-control" required value="${esc(r?r.numero:'FAC-'+String(Math.max(0,...nums)+1).padStart(3,'0'))}"></div><div class="col-md-6"><label class="form-label">Orden de trabajo</label>${ordSel}</div><div class="col-md-3"><label class="form-label">Fecha</label><input type="date" name="fecha" class="form-control" required value="${r?r.fecha:new Date().toISOString().slice(0,10)}"></div></div><div id="fh" class="small text-muted mt-1">Al elegir la orden se cargan los ítems de su cotización aprobada.</div>`
+ :`<div class="row g-2"><div class="col-md-8"><label class="form-label">Orden de trabajo</label>${ordSel}</div><div class="col-md-4"><label class="form-label">Estado</label><select name="estado" class="form-select">${['Pendiente','Aprobada','Rechazada'].map(o=>`<option ${r&&r.estado==o?'selected':''}>${o}</option>`).join('')}</select></div></div>`;
+ return cab+`<div class="row g-3 mt-1"><div class="col-md-6"><h6 class="mb-1">Servicios</h6><div style="max-height:220px;overflow:auto">${lista('s','servicios','No hay servicios. Créalos en «Gestión de servicios».')}</div></div>
  <div class="col-md-6"><h6 class="mb-1">Repuestos <small class="text-muted fw-normal">(cantidad)</small></h6><div style="max-height:220px;overflow:auto">${lista('r','repuestos','No hay repuestos. Créalos en «Gestión de repuestos».')}</div></div></div>
  <div class="bg-light rounded p-3 mt-3 text-end"><div>Subtotal: <b id="cs">0.00</b></div><div>ITBIS (18%): <b id="ci2">0.00</b></div><div class="fs-5">Total: RD$ <b id="ct" style="color:var(--azul)">0.00</b></div></div>`}
+/* Factura: al elegir la orden se cargan los ítems de su cotización aprobada */
+function facCarga(e){
+ const o=e.target.value,c=get('cotizaciones').filter(x=>x.orden==o&&x.estado=='Aprobada'&&x.items).pop(),h=$('#fh');
+ document.querySelectorAll('.ci').forEach(b=>{b.checked=false});
+ if(c){c.items.forEach(x=>{const b=document.querySelector(`.ci[data-t="${x.t}"][data-id="${x.id}"]`);if(b){b.checked=true;const q=b.parentElement.querySelector('.cq');if(q)q.value=x.c}});h.textContent='Ítems cargados desde la cotización aprobada. Puedes ajustarlos.'}
+ else h.textContent=o?'Esta orden no tiene cotización aprobada: selecciona los ítems manualmente.':'';
+ cotCalc()}
+/* Pagos: muestra total, pagado y saldo de la factura y propone el saldo como monto */
+function pagoHook(r){
+ const s=$('#fb [name=factura]'),m=$('#fb [name=monto]');
+ $('#fb').insertAdjacentHTML('beforeend','<div id="ph" class="small text-muted mt-2"></div>');
+ const calc=ch=>{const f=get('facturacion').find(x=>x.id==s.value);if(!f)return $('#ph').textContent='';
+  const pag=get('pagos').filter(p=>p.factura==f.id&&(!r||p.id!=r.id)).reduce((a,p)=>a+Number(p.monto),0),saldo=Math.max(0,Number(f.total)-pag);
+  $('#ph').textContent=`Total RD$ ${fmt(f.total)} · Pagado RD$ ${fmt(pag)} · Saldo RD$ ${fmt(saldo)}`;if(ch)m.value=saldo.toFixed(2)};
+ s.addEventListener('change',()=>calc(true));calc(false)}
 function cotCalc(){
  const items=[...document.querySelectorAll('.ci:checked')].map(c=>{const q=c.parentElement.querySelector('.cq');return {t:c.dataset.t,id:c.dataset.id,d:c.dataset.d,p:+c.dataset.p,c:Math.max(1,+(q?q.value:1)||1)}});
  const sub=items.reduce((a,x)=>a+x.p*x.c,0),itbis=Math.round(sub*18)/100;
@@ -99,20 +115,20 @@ function cotCalc(){
 
 function crud(k){
  const m=M[k],cols=m.f.filter(f=>f[2]!='textarea').slice(0,5);
- const cell=(f,r)=>f[2]=='ref'?esc(nm(f[3],r[f[0]])):f[2]=='password'?'••••':esc(r[f[0]]);
+ const cell=(f,r)=>f[2]=='ref'?esc(nm(f[3],r[f[0]])):f[2]=='password'?'••••':(f[0]=='total'||f[0]=='monto')&&r[f[0]]!==undefined&&r[f[0]]!==''?fmt(r[f[0]]):esc(r[f[0]]);
  const inp=(f,v)=>{const n=`name="${f[0]}" class="form-control" `,req=f[2]=='textarea'?'':'required';
   if(f[2]=='textarea')return `<textarea ${n}rows="3">${esc(v)}</textarea>`;
   if(f[2]=='select')return `<select name="${f[0]}" class="form-select" required>${f[3].map(o=>`<option value="${o}" ${o==v?'selected':''}>${o=='admin'||ROLES[o]?ROLES[o]||o:o}</option>`).join('')}</select>`;
-  if(f[2]=='ref'){const l=get(f[3]);return `<select name="${f[0]}" class="form-select" required><option value="">Seleccionar...</option>${l.map(x=>`<option value="${x.id}" ${x.id==v?'selected':''}>${esc(nm(f[3],x.id))}</option>`).join('')}</select>`}
-  return `<input ${n}type="${f[2]||'text'}" value="${esc(v)}" ${req}>`};
+  if(f[2]=='ref'){const l=get(f[3]).filter(x=>!f[4]||f[4](x)||x.id==v);return `<select name="${f[0]}" class="form-select" required><option value="">Seleccionar...</option>${l.map(x=>`<option value="${x.id}" ${x.id==v?'selected':''}>${esc(nm(f[3],x.id))}</option>`).join('')}</select>`}
+  return `<input ${n}type="${f[2]||'text'}" ${f[2]=='number'?'step="any"':''} value="${esc(v)}" ${req}>`};
  $('#main').innerHTML=`<div class="d-flex justify-content-between mb-3"><h4>${m.t}</h4>${m.ro?'':'<button class="btn btn-warning" id="nw"><i class="bi bi-plus-lg"></i> Nuevo</button>'}</div>
  <input id="q" class="form-control mb-3" placeholder="Buscar...">
  <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr>${cols.map(c=>`<th>${c[1]}</th>`).join('')}${m.ro?'':'<th></th>'}</tr></thead><tbody id="tb"></tbody></table></div></div>
- <div class="modal fade" id="md" tabindex="-1"><div class="modal-dialog ${k=='cotizaciones'?'modal-lg':''}"><form class="modal-content" id="f"><div class="modal-header"><h5 class="modal-title">${m.t}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="fb"></div><div class="modal-footer"><div id="err" class="text-danger small me-auto"></div><button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-warning">Guardar</button></div></form></div></div>`;
+ <div class="modal fade" id="md" tabindex="-1"><div class="modal-dialog ${k=='cotizaciones'||k=='facturacion'?'modal-lg':''}"><form class="modal-content" id="f"><div class="modal-header"><h5 class="modal-title">${m.t}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="fb"></div><div class="modal-footer"><div id="err" class="text-danger small me-auto"></div><button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-warning">Guardar</button></div></form></div></div>`;
  const modal=new bootstrap.Modal('#md');let cur=null;
  const draw=()=>{const q=$('#q').value.toLowerCase(),rows=get(k).filter(r=>cols.some(c=>cell(c,r).toLowerCase().includes(q)));
   $('#tb').innerHTML=rows.length?rows.map(r=>`<tr>${cols.map(c=>`<td>${cell(c,r)}</td>`).join('')}${m.ro?'':`<td class="text-end text-nowrap"><button class="btn btn-sm btn-outline-primary" data-e="${r.id}"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-outline-danger" data-d="${r.id}"><i class="bi bi-trash"></i></button></td>`}</tr>`).join(''):`<tr><td colspan="9" class="text-center text-muted py-4">Sin registros. ${m.ro?'':'Usa «Nuevo» para agregar el primero.'}</td></tr>`};
- const open=r=>{cur=r;$('#err').textContent='';if(k=='cotizaciones'){$('#fb').innerHTML=cotBody(r);['input','change'].forEach(ev=>$('#fb').addEventListener(ev,cotCalc));cotCalc()}else $('#fb').innerHTML=m.f.map(f=>`<label class="form-label mt-2">${f[1]}</label>${inp(f,r?r[f[0]]:'')}`).join('');modal.show()};
+ const open=r=>{cur=r;$('#err').textContent='';if(k=='cotizaciones'||k=='facturacion'){$('#fb').innerHTML=cotBody(r,k);['input','change'].forEach(ev=>$('#fb').addEventListener(ev,cotCalc));if(k=='facturacion')$('#fb').querySelector('[name=orden]').addEventListener('change',facCarga);cotCalc()}else $('#fb').innerHTML=m.f.map(f=>`<label class="form-label mt-2">${f[1]}</label>${inp(f,r?r[f[0]]:'')}`).join('');if(k=='pagos')pagoHook(r);modal.show()};
  draw();$('#q').oninput=draw;
  if(!m.ro)$('#nw').onclick=()=>open(null);
  $('#tb').onclick=e=>{const b=e.target.closest('button');if(!b)return;
@@ -121,7 +137,7 @@ function crud(k){
   if(k=='usuarios'){if(r.id==u.id)return alert('No puedes eliminar tu propio usuario.');const er=chkUsuarios(rest,r);if(er)return alert(er)}
   if(!confirm('¿Eliminar este registro?'))return;put(k,rest);log('Eliminó registro',k);draw()};
  $('#f').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));let l=get(k);
-  if(k=='cotizaciones'){const c=cotCalc();if(!c.items.length)return $('#err').textContent='Selecciona al menos un servicio o repuesto.';Object.assign(d,{items:c.items,subtotal:c.sub,itbis:c.itbis,total:c.total,descripcion:c.items.map(x=>x.d+(x.c>1?' x'+x.c:'')).join(', ')})}
+  if(k=='cotizaciones'||k=='facturacion'){if(k=='facturacion'&&l.some(x=>x.numero==d.numero&&(!cur||x.id!=cur.id)))return $('#err').textContent='Ese número de factura ya existe.';const c=cotCalc();if(!c.items.length)return $('#err').textContent='Selecciona al menos un servicio o repuesto.';Object.assign(d,{items:c.items,subtotal:c.sub,itbis:c.itbis,total:c.total,descripcion:c.items.map(x=>x.d+(x.c>1?' x'+x.c:'')).join(', ')})}
   const reg=cur?{...cur,...d}:{id:Date.now(),...d};
   const nl=cur?l.map(x=>x.id==cur.id?reg:x):[...l,reg];
   if(k=='usuarios'){if(nl.filter(x=>x.usuario==reg.usuario).length>1)return $('#err').textContent='Ese nombre de usuario ya existe.';
