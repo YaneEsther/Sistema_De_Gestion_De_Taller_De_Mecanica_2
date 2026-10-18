@@ -5,6 +5,7 @@ const put=(k,v)=>localStorage.setItem('tg_'+k,JSON.stringify(v));
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ROLES={admin:'Administrador',mecanico:'Mecánico',recepcion:'Recepcionista',facturador:'Facturador'};
 const A='admin',R='recepcion',ME='mecanico',F='facturador';
+const METODOS=['Efectivo','Tarjeta de crédito','Tarjeta de débito','Transferencia','Cheque'];
 const ESTADOS=['Recibida','Diagnosticada','Cotizada','Aprobada','En ejecución','Finalizada','Facturada'];
 /* Módulos: t=título, i=icono, r=roles con acceso, f=campos [clave,etiqueta,tipo,opciones] */
 const M={
@@ -21,7 +22,7 @@ cotizaciones:{t:'Cotizaciones',i:'file-earmark-text',r:[A,R,F],f:[['orden','Orde
 aprobacion:{t:'Aprobación del cliente',i:'check2-circle',r:[A,R],f:[['cotizacion','Cotización','ref','cotizaciones'],['decision','Decisión','select',['Aprobada','Rechazada']],['fecha','Fecha','date'],['comentario','Observaciones del cliente','textarea']]},
 ejecucion:{t:'Ejecución del trabajo',i:'play-circle',r:[A,ME],f:[['orden','Orden de trabajo','ref','ordenes'],['etapa','Etapa','select',['Recepción','Diagnóstico','Repuestos','Ejecución','Finalización']],['notas','Notas del trabajo','textarea']]},
 facturacion:{t:'Facturación',i:'receipt',r:[A,F],f:[['numero','N° de factura'],['orden','Orden de trabajo','ref','ordenes'],['total','Total (RD$)','number'],['fecha','Fecha','date']]},
-pagos:{t:'Pagos',i:'credit-card',r:[A,F],f:[['factura','Factura','ref','facturacion'],['monto','Monto (RD$)','number'],['metodo','Método de pago','select',['Efectivo','Tarjeta de crédito','Transferencia']],['fecha','Fecha','date']]},
+pagos:{t:'Pagos',i:'credit-card',r:[A,F],f:[['factura','Factura','ref','facturacion'],['monto','Monto (RD$)','number'],['metodo','Método de pago','select',METODOS],['fecha','Fecha','date'],['detalle','Detalle']]},
 usuarios:{t:'Usuarios y roles',i:'person-badge',r:[A],f:[['usuario','Usuario'],['nombre','Nombre completo'],['clave','Contraseña','password'],['rol','Rol','select',Object.keys(ROLES)],['estado','Estado','select',['Activo','Inactivo']]]},
 auditoria:{t:'Auditoría',i:'shield-check',r:[A],ro:1,f:[['fecha','Fecha y hora'],['usuario','Usuario'],['accion','Acción'],['modulo','Módulo']]},
 reportes:{t:'Reportes',i:'bar-chart',r:[A,F],custom:1},
@@ -31,6 +32,10 @@ const first=k=>M[k].f[0][0];
 const nm=(k,id)=>{const r=get(k).find(x=>x.id==id);return r?(k=='usuarios'?r.nombre:r[first(k)]):'—'};
 const u=JSON.parse(sessionStorage.getItem('tg_ses')||'null'),pg=document.body.dataset.m;
 
+const mine=()=>get('mecanicos').filter(a=>a.mecanico==u.id).map(a=>String(a.orden));
+const vis=(k,rows)=>u&&u.rol==ME?(k=='ordenes'?rows.filter(o=>mine().includes(String(o.id))):k=='ejecucion'?rows.filter(e=>mine().includes(String(e.orden))):rows):rows;
+const BC={Pagada:'success',Finalizada:'success',Facturada:'success',Aprobada:'success',Activo:'success','Sin anomalías':'success',Parcial:'warning',Pendiente:'warning',Recibida:'secondary',Diagnosticada:'info',Cotizada:'info','En ejecución':'primary',Rechazada:'danger',Inactivo:'danger','Con fallas':'danger'};
+const bdg=v=>`<span class="badge text-bg-${BC[v]||'secondary'}">${esc(v)}</span>`;
 if(!localStorage.tg_usuarios)put('usuarios',[
  {id:1,usuario:'admin',nombre:'Administrador',clave:'admin123',rol:A,estado:'Activo'},
  {id:2,usuario:'mecanico',nombre:'Carlos Díaz',clave:'mec123',rol:ME,estado:'Activo'},
@@ -59,13 +64,18 @@ function shell(){
  const nav=Object.entries(M).filter(([k,m])=>m.r.includes(u.rol));
  $('#app').innerHTML=`<div class="d-flex"><aside class="offcanvas-md offcanvas-start sidebar" id="sb"><div class="p-3 brand"><i class="bi bi-gear-fill text-warning"></i> Taller<span style="color:var(--dorado)">Gest</span></div>
  <nav class="nav flex-column px-2 pb-3"><a class="nav-link ${pg=='dashboard'?'active':''}" href="dashboard.html"><i class="bi bi-house"></i>Inicio</a>${nav.map(([k,m])=>`<a class="nav-link ${k==pg?'active':''}" href="${k}.html"><i class="bi bi-${m.i}"></i>${m.t}</a>`).join('')}</nav></aside>
- <div class="flex-grow-1 min-vw-0"><header class="topbar d-flex align-items-center gap-2 px-3 py-2 bg-white shadow-sm"><button class="btn d-md-none" data-bs-toggle="offcanvas" data-bs-target="#sb"><i class="bi bi-list fs-4"></i></button><span class="ms-auto small text-muted">${esc(u.nombre)} · ${ROLES[u.rol]}</span><button class="btn btn-sm btn-outline-primary" id="out">Salir</button></header><main class="p-3 p-md-4" id="main"></main></div></div>`;
+ <div class="flex-grow-1 min-vw-0"><header class="topbar d-flex align-items-center gap-2 px-3 py-2 bg-white shadow-sm"><button class="btn d-md-none" data-bs-toggle="offcanvas" data-bs-target="#sb"><i class="bi bi-list fs-4"></i></button><div class="ms-auto"></div>${u.rol==ME?'<div class="dropdown"><button class="btn btn-sm position-relative" id="bell" data-bs-toggle="dropdown"><i class="bi bi-bell fs-5"></i><span id="bn" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none"></span></button><ul class="dropdown-menu dropdown-menu-end p-0" id="bl" style="width:300px"></ul></div>':''}<span class="small text-muted">${esc(u.nombre)} · ${ROLES[u.rol]}</span><button class="btn btn-sm btn-outline-primary" id="out">Salir</button></header><main class="p-3 p-md-4" id="main"></main></div></div>`;
  $('#out').onclick=()=>{log('Cierre de sesión','Login');sessionStorage.removeItem('tg_ses');location='index.html'};
+ if(u.rol==ME){bell();$('#bell').addEventListener('click',()=>setTimeout(()=>{put('notif',get('notif').map(x=>x.para==u.id?{...x,leida:true}:x));$('#bn').classList.add('d-none')},50));addEventListener('storage',bell)}
  pg=='dashboard'?dash():pg=='reportes'?rep():pg=='configuracion'?cfg():crud(pg)}
 
+function bell(){
+ const n=get('notif').filter(x=>x.para==u.id),nu=n.filter(x=>!x.leida).length;
+ $('#bn').textContent=nu;$('#bn').classList.toggle('d-none',!nu);
+ $('#bl').innerHTML=n.length?n.slice(0,8).map(x=>`<li class="dropdown-item-text small border-bottom ${x.leida?'text-muted':'fw-semibold'}">${esc(x.texto)}<div class="text-muted fw-normal">${esc(x.fecha)}</div></li>`).join(''):'<li class="dropdown-item-text small text-muted">Sin notificaciones</li>'}
 function dash(){
  const ks=['clientes','vehiculos','ordenes','cotizaciones','servicios','repuestos'].filter(k=>M[k].r.includes(u.rol));
- $('#main').innerHTML=`<h4>Hola, ${esc(u.nombre)}</h4><p class="text-muted">Bienvenido al sistema TallerGest</p><div class="row g-3">${ks.map(k=>`<div class="col-6 col-lg-4"><a href="${k}.html" class="text-decoration-none text-reset"><div class="card stat p-3 d-flex flex-row align-items-center gap-3"><i class="bi bi-${M[k].i}"></i><div><div class="text-muted small">${M[k].t}</div><div class="n">${get(k).length}</div></div></div></a></div>`).join('')}</div>`}
+ $('#main').innerHTML=`<h4>Hola, ${esc(u.nombre)}</h4><p class="text-muted">Bienvenido al sistema TallerGest</p><div class="row g-3">${ks.map(k=>`<div class="col-6 col-lg-4"><a href="${k}.html" class="text-decoration-none text-reset"><div class="card stat p-3 d-flex flex-row align-items-center gap-3"><i class="bi bi-${M[k].i}"></i><div><div class="text-muted small">${u.rol==ME&&k=='ordenes'?'Mis órdenes asignadas':M[k].t}</div><div class="n">${vis(k,get(k)).length}</div></div></div></a></div>`).join('')}</div>`}
 
 function rep(){
  const tot=k=>get(k).reduce((s,x)=>s+Number(x.total||x.monto||0),0).toLocaleString('es-DO');
@@ -99,14 +109,36 @@ function facCarga(e){
  if(c){c.items.forEach(x=>{const b=document.querySelector(`.ci[data-t="${x.t}"][data-id="${x.id}"]`);if(b){b.checked=true;const q=b.parentElement.querySelector('.cq');if(q)q.value=x.c}});h.textContent='Ítems cargados desde la cotización aprobada. Puedes ajustarlos.'}
  else h.textContent=o?'Esta orden no tiene cotización aprobada: selecciona los ítems manualmente.':'';
  cotCalc()}
-/* Pagos: muestra total, pagado y saldo de la factura y propone el saldo como monto */
-function pagoHook(r){
- const s=$('#fb [name=factura]'),m=$('#fb [name=monto]');
- $('#fb').insertAdjacentHTML('beforeend','<div id="ph" class="small text-muted mt-2"></div>');
- const calc=ch=>{const f=get('facturacion').find(x=>x.id==s.value);if(!f)return $('#ph').textContent='';
-  const pag=get('pagos').filter(p=>p.factura==f.id&&(!r||p.id!=r.id)).reduce((a,p)=>a+Number(p.monto),0),saldo=Math.max(0,Number(f.total)-pag);
-  $('#ph').textContent=`Total RD$ ${fmt(f.total)} · Pagado RD$ ${fmt(pag)} · Saldo RD$ ${fmt(saldo)}`;if(ch)m.value=saldo.toFixed(2)};
- s.addEventListener('change',()=>calc(true));calc(false)}
+/* Pagos: formulario dinámico según el método */
+const pagado=(fid,ex)=>get('pagos').filter(p=>p.factura==fid&&p.id!=ex).reduce((a,p)=>a+Number(p.monto),0);
+const CAMPOS={'Efectivo':[['recibido','Efectivo recibido (RD$)','number']],
+ 'Tarjeta de crédito':[['marca','Marca','select',['Visa','Mastercard','American Express','Otra']],['ultimos4','Últimos 4 dígitos'],['autorizacion','N° de aprobación'],['cuotas','Cuotas','select',['1','3','6','12']]],
+ 'Tarjeta de débito':[['marca','Marca','select',['Visa','Mastercard','American Express','Otra']],['ultimos4','Últimos 4 dígitos'],['autorizacion','N° de aprobación']],
+ 'Transferencia':[['banco','Banco'],['referencia','N° de referencia']],
+ 'Cheque':[['banco','Banco'],['ncheque','N° de cheque']]};
+function pagoBody(r){
+ return `<div class="row g-2"><div class="col-md-8"><label class="form-label">Factura</label><select name="factura" class="form-select" required><option value="">Seleccionar...</option>${get('facturacion').map(f=>`<option value="${f.id}" ${r&&f.id==r.factura?'selected':''}>${esc(f.numero)} · ${esc(nm('ordenes',f.orden))} · RD$ ${fmt(f.total)}</option>`).join('')}</select></div>
+ <div class="col-md-4"><label class="form-label">Fecha</label><input type="date" name="fecha" class="form-control" required value="${r?r.fecha:new Date().toISOString().slice(0,10)}"></div></div>
+ <div id="pr" class="bg-light rounded p-2 mt-2 small text-muted">Selecciona una factura.</div>
+ <div class="row g-2 mt-1"><div class="col-md-6"><label class="form-label">Método de pago</label><select name="metodo" class="form-select" required>${METODOS.map(o=>`<option ${r&&r.metodo==o?'selected':''}>${o}</option>`).join('')}</select></div>
+ <div class="col-md-6"><label class="form-label">Monto a pagar (RD$)</label><input name="monto" type="number" step="any" min="0.01" class="form-control" required value="${r?r.monto:''}"></div></div>
+ <div id="pm" class="row g-2 mt-1"></div><div id="pt" class="rounded p-2 mt-3 fw-semibold"></div>
+ <label class="form-label mt-2">Notas</label><textarea name="notas" rows="2" class="form-control">${esc(r&&r.notas)}</textarea>`}
+function pagoBind(r){
+ const g=n=>$('#fb [name='+n+']'),fa=()=>get('facturacion').find(x=>x.id==g('factura').value);
+ const calc=()=>{const f=fa(),m=+g('monto').value||0;
+  if(!f){$('#pr').textContent='Selecciona una factura.';$('#pt').textContent='';$('#pt').className='';return}
+  const pag=pagado(f.id,r&&r.id),saldo=Math.max(0,Number(f.total)-pag);
+  $('#pr').innerHTML=`Total <b>RD$ ${fmt(f.total)}</b> · Pagado <b>RD$ ${fmt(pag)}</b> · Saldo <b>RD$ ${fmt(saldo)}</b>`;
+  let t=`Saldo después de este pago: RD$ ${fmt(Math.max(0,saldo-m))}`,c='bg-light';
+  if(m>saldo+0.001){t='El monto supera el saldo de la factura.';c='bg-danger-subtle text-danger'}
+  else if(g('recibido')){const rc=+g('recibido').value||0;
+   if(rc<m){t=`Faltan RD$ ${fmt(m-rc)} · `+t;c='bg-warning-subtle'}else{t=`Devolver al cliente: RD$ ${fmt(rc-m)} · `+t;c='bg-success-subtle'}}
+  $('#pt').className='rounded p-2 mt-3 fw-semibold '+c;$('#pt').textContent=t};
+ const pintar=()=>{$('#pm').innerHTML=CAMPOS[g('metodo').value].map(([n,l,t,o])=>`<div class="col-md-6"><label class="form-label">${l}</label>${t=='select'?`<select name="${n}" class="form-select">${o.map(x=>`<option ${r&&r[n]==x?'selected':''}>${x}</option>`).join('')}</select>`:`<input name="${n}" type="${t||'text'}" ${t=='number'?'step="any" min="0"':''} ${n=='ultimos4'?'maxlength="4" pattern="[0-9]{4}" title="4 dígitos"':''} class="form-control" required value="${esc(r&&r[n]!==undefined?r[n]:'')}">`}</div>`).join('');calc()};
+ $('#fb').oninput=calc;
+ $('#fb').onchange=e=>{if(e.target.name=='factura'){const f=fa();if(f)g('monto').value=Math.max(0,Number(f.total)-pagado(f.id,r&&r.id)).toFixed(2)}if(e.target.name=='metodo')pintar();calc()};
+ pintar()}
 function cotCalc(){
  const items=[...document.querySelectorAll('.ci:checked')].map(c=>{const q=c.parentElement.querySelector('.cq');return {t:c.dataset.t,id:c.dataset.id,d:c.dataset.d,p:+c.dataset.p,c:Math.max(1,+(q?q.value:1)||1)}});
  const sub=items.reduce((a,x)=>a+x.p*x.c,0),itbis=Math.round(sub*18)/100;
@@ -114,34 +146,43 @@ function cotCalc(){
  return {items,sub,itbis,total:sub+itbis}}
 
 function crud(k){
- const m=M[k],cols=m.f.filter(f=>f[2]!='textarea').slice(0,5);
- const cell=(f,r)=>f[2]=='ref'?esc(nm(f[3],r[f[0]])):f[2]=='password'?'••••':(f[0]=='total'||f[0]=='monto')&&r[f[0]]!==undefined&&r[f[0]]!==''?fmt(r[f[0]]):esc(r[f[0]]);
+ const m=M[k],cols=m.f.filter(f=>f[2]!='textarea').slice(0,5),noNew=m.ro||(u.rol==ME&&k=='ordenes');
+ const ex=k=='facturacion'?[['Pagado',r=>fmt(pagado(r.id))],['Saldo',r=>fmt(Math.max(0,Number(r.total)-pagado(r.id)))],['Estado',r=>{const p=pagado(r.id);return bdg(p<=0?'Pendiente':p+0.001>=Number(r.total)?'Pagada':'Parcial')}]]:[];
+ const cell=(f,r)=>f[2]=='ref'?esc(nm(f[3],r[f[0]])):f[2]=='password'?'••••':['estado','decision','resultado'].includes(f[0])&&r[f[0]]?bdg(r[f[0]]):f[0]=='stock'&&r.stock!==undefined&&r.stock!==''?esc(r.stock)+(+r.stock<=5?' <span class="badge text-bg-danger">Bajo</span>':''):(f[0]=='total'||f[0]=='monto')&&r[f[0]]!==undefined&&r[f[0]]!==''?fmt(r[f[0]]):esc(r[f[0]]);
  const inp=(f,v)=>{const n=`name="${f[0]}" class="form-control" `,req=f[2]=='textarea'?'':'required';
   if(f[2]=='textarea')return `<textarea ${n}rows="3">${esc(v)}</textarea>`;
   if(f[2]=='select')return `<select name="${f[0]}" class="form-select" required>${f[3].map(o=>`<option value="${o}" ${o==v?'selected':''}>${o=='admin'||ROLES[o]?ROLES[o]||o:o}</option>`).join('')}</select>`;
-  if(f[2]=='ref'){const l=get(f[3]).filter(x=>!f[4]||f[4](x)||x.id==v);return `<select name="${f[0]}" class="form-select" required><option value="">Seleccionar...</option>${l.map(x=>`<option value="${x.id}" ${x.id==v?'selected':''}>${esc(nm(f[3],x.id))}</option>`).join('')}</select>`}
+  if(f[2]=='ref'){const l=vis(f[3],get(f[3])).filter(x=>!f[4]||f[4](x)||x.id==v);return `<select name="${f[0]}" class="form-select" required><option value="">Seleccionar...</option>${l.map(x=>`<option value="${x.id}" ${x.id==v?'selected':''}>${esc(nm(f[3],x.id))}</option>`).join('')}</select>`}
   return `<input ${n}type="${f[2]||'text'}" ${f[2]=='number'?'step="any"':''} value="${esc(v)}" ${req}>`};
- $('#main').innerHTML=`<div class="d-flex justify-content-between mb-3"><h4>${m.t}</h4>${m.ro?'':'<button class="btn btn-warning" id="nw"><i class="bi bi-plus-lg"></i> Nuevo</button>'}</div>
+ $('#main').innerHTML=`<div class="d-flex justify-content-between mb-3"><h4>${m.t}</h4>${noNew?'':'<button class="btn btn-warning" id="nw"><i class="bi bi-plus-lg"></i> Nuevo</button>'}</div>
  <input id="q" class="form-control mb-3" placeholder="Buscar...">
- <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr>${cols.map(c=>`<th>${c[1]}</th>`).join('')}${m.ro?'':'<th></th>'}</tr></thead><tbody id="tb"></tbody></table></div></div>
- <div class="modal fade" id="md" tabindex="-1"><div class="modal-dialog ${k=='cotizaciones'||k=='facturacion'?'modal-lg':''}"><form class="modal-content" id="f"><div class="modal-header"><h5 class="modal-title">${m.t}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="fb"></div><div class="modal-footer"><div id="err" class="text-danger small me-auto"></div><button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-warning">Guardar</button></div></form></div></div>`;
+ <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr>${cols.map(c=>`<th>${c[1]}</th>`).join('')}${ex.map(e=>`<th>${e[0]}</th>`).join('')}${m.ro?'':'<th></th>'}</tr></thead><tbody id="tb"></tbody></table></div></div>
+ <div class="modal fade" id="md" tabindex="-1"><div class="modal-dialog ${k=='cotizaciones'||k=='facturacion'||k=='pagos'?'modal-lg':''}"><form class="modal-content" id="f"><div class="modal-header"><h5 class="modal-title">${m.t}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="fb"></div><div class="modal-footer"><div id="err" class="text-danger small me-auto"></div><button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-warning">Guardar</button></div></form></div></div>`;
  const modal=new bootstrap.Modal('#md');let cur=null;
- const draw=()=>{const q=$('#q').value.toLowerCase(),rows=get(k).filter(r=>cols.some(c=>cell(c,r).toLowerCase().includes(q)));
-  $('#tb').innerHTML=rows.length?rows.map(r=>`<tr>${cols.map(c=>`<td>${cell(c,r)}</td>`).join('')}${m.ro?'':`<td class="text-end text-nowrap"><button class="btn btn-sm btn-outline-primary" data-e="${r.id}"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-outline-danger" data-d="${r.id}"><i class="bi bi-trash"></i></button></td>`}</tr>`).join(''):`<tr><td colspan="9" class="text-center text-muted py-4">Sin registros. ${m.ro?'':'Usa «Nuevo» para agregar el primero.'}</td></tr>`};
- const open=r=>{cur=r;$('#err').textContent='';if(k=='cotizaciones'||k=='facturacion'){$('#fb').innerHTML=cotBody(r,k);['input','change'].forEach(ev=>$('#fb').addEventListener(ev,cotCalc));if(k=='facturacion')$('#fb').querySelector('[name=orden]').addEventListener('change',facCarga);cotCalc()}else $('#fb').innerHTML=m.f.map(f=>`<label class="form-label mt-2">${f[1]}</label>${inp(f,r?r[f[0]]:'')}`).join('');if(k=='pagos')pagoHook(r);modal.show()};
+ const draw=()=>{const q=$('#q').value.toLowerCase(),rows=vis(k,get(k)).filter(r=>cols.some(c=>cell(c,r).replace(/<[^>]+>/g,'').toLowerCase().includes(q)));
+  $('#tb').innerHTML=rows.length?rows.map(r=>`<tr>${cols.map(c=>`<td>${cell(c,r)}</td>`).join('')}${ex.map(e=>`<td>${e[1](r)}</td>`).join('')}${m.ro?'':`<td class="text-end text-nowrap"><button class="btn btn-sm btn-outline-primary" data-e="${r.id}"><i class="bi bi-pencil"></i></button>${noNew?'':` <button class="btn btn-sm btn-outline-danger" data-d="${r.id}"><i class="bi bi-trash"></i></button>`}</td>`}</tr>`).join(''):`<tr><td colspan="9" class="text-center text-muted py-4">Sin registros. ${m.ro?'':'Usa «Nuevo» para agregar el primero.'}</td></tr>`};
+ const open=r=>{cur=r;$('#err').textContent='';if(k=='cotizaciones'||k=='facturacion'){$('#fb').innerHTML=cotBody(r,k);['input','change'].forEach(ev=>$('#fb').addEventListener(ev,cotCalc));if(k=='facturacion')$('#fb').querySelector('[name=orden]').addEventListener('change',facCarga);cotCalc()}else $('#fb').innerHTML=m.f.map(f=>`<label class="form-label mt-2">${f[1]}</label>${inp(f,r?r[f[0]]:'')}`).join('');if(k=='pagos'){$('#fb').innerHTML=pagoBody(r);pagoBind(r)}modal.show()};
  draw();$('#q').oninput=draw;
- if(!m.ro)$('#nw').onclick=()=>open(null);
+ if(!noNew)$('#nw').onclick=()=>open(null);
  $('#tb').onclick=e=>{const b=e.target.closest('button');if(!b)return;
   if(b.dataset.e)return open(get(k).find(x=>x.id==b.dataset.e));
   const r=get(k).find(x=>x.id==b.dataset.d),rest=get(k).filter(x=>x.id!=r.id);
   if(k=='usuarios'){if(r.id==u.id)return alert('No puedes eliminar tu propio usuario.');const er=chkUsuarios(rest,r);if(er)return alert(er)}
+  if(k=='facturacion'&&pagado(r.id))return alert('Esta factura tiene pagos registrados. Elimina primero sus pagos.');
   if(!confirm('¿Eliminar este registro?'))return;put(k,rest);log('Eliminó registro',k);draw()};
  $('#f').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));let l=get(k);
   if(k=='cotizaciones'||k=='facturacion'){if(k=='facturacion'&&l.some(x=>x.numero==d.numero&&(!cur||x.id!=cur.id)))return $('#err').textContent='Ese número de factura ya existe.';const c=cotCalc();if(!c.items.length)return $('#err').textContent='Selecciona al menos un servicio o repuesto.';Object.assign(d,{items:c.items,subtotal:c.sub,itbis:c.itbis,total:c.total,descripcion:c.items.map(x=>x.d+(x.c>1?' x'+x.c:'')).join(', ')})}
+  if(k=='pagos'){const f=get('facturacion').find(x=>x.id==d.factura),m=+d.monto,saldo=Number(f.total)-pagado(f.id,cur&&cur.id);
+  if(m>saldo+0.001)return $('#err').textContent='El monto supera el saldo de la factura.';
+  if(d.metodo=='Efectivo'&&+d.recibido<m)return $('#err').textContent='El efectivo recibido es menor al monto a pagar.';
+  d.monto=m;if(cur)cur={id:cur.id};
+  if(d.metodo=='Efectivo'){d.devuelta=+d.recibido-m;d.detalle=`Recibido ${fmt(d.recibido)} · Devuelta ${fmt(d.devuelta)}`}
+  else d.detalle=(d.marca?`${d.marca} ****${d.ultimos4} · Aut. ${d.autorizacion}`:d.metodo=='Cheque'?`${d.banco} · Cheque ${d.ncheque}`:`${d.banco} · Ref. ${d.referencia}`)+(d.cuotas&&d.cuotas!='1'?` · ${d.cuotas} cuotas`:'')}
   const reg=cur?{...cur,...d}:{id:Date.now(),...d};
   const nl=cur?l.map(x=>x.id==cur.id?reg:x):[...l,reg];
   if(k=='usuarios'){if(nl.filter(x=>x.usuario==reg.usuario).length>1)return $('#err').textContent='Ese nombre de usuario ya existe.';
    const er=chkUsuarios(nl,reg);if(er)return $('#err').textContent=er}
+  if(k=='mecanicos'&&(!cur||cur.mecanico!=reg.mecanico||cur.orden!=reg.orden)){const n=get('notif'),o=get('ordenes').find(x=>x.id==reg.orden)||{};n.unshift({id:Date.now(),para:reg.mecanico,texto:'Se te asignó la orden '+nm('ordenes',reg.orden)+' · Cliente: '+nm('clientes',o.cliente),fecha:new Date().toLocaleString('es-DO'),leida:false});put('notif',n)}
   put(k,nl);log(cur?'Editó registro':'Creó registro',k);modal.hide();draw()}}
 
 if(pg=='login')login();
