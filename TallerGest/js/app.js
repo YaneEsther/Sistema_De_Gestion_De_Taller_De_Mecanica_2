@@ -6,21 +6,21 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const ROLES={admin:'Administrador',mecanico:'Mecánico',recepcion:'Recepcionista',facturador:'Facturador'};
 const A='admin',R='recepcion',ME='mecanico',F='facturador';
 const METODOS=['Efectivo','Tarjeta de crédito','Tarjeta de débito','Transferencia','Cheque'];
-const ESTADOS=['Recibida','Diagnosticada','Cotizada','Aprobada','En ejecución','Finalizada','Facturada'];
+const ESTADOS=['Recibida','Diagnosticada','Cotizada','Aprobada','En ejecución','Finalizada','Facturada','Pagada'];
 /* Módulos: t=título, i=icono, r=roles con acceso, f=campos [clave,etiqueta,tipo,opciones] */
 const M={
 clientes:{t:'Registro de clientes',i:'people',r:[A,R],f:[['nombre','Nombre completo'],['telefono','Teléfono','tel'],['correo','Correo electrónico','email'],['direccion','Dirección']]},
 vehiculos:{t:'Registro de vehículos',i:'car-front',r:[A,R],f:[['placa','Placa / VIN'],['marca','Marca'],['modelo','Modelo'],['anio','Año','number'],['cliente','Cliente','ref','clientes']]},
 historial:{t:'Historial de mantenimiento',i:'clock-history',r:[A,R,ME],f:[['vehiculo','Vehículo','ref','vehiculos'],['fecha','Fecha','date'],['servicio','Servicio'],['km','Kilometraje','number'],['tecnico','Técnico']]},
 recepcion:{t:'Recepción del vehículo',i:'box-arrow-in-right',r:[A,R],f:[['vehiculo','Vehículo','ref','vehiculos'],['fecha','Fecha','date'],['km','Kilometraje','number'],['obs','Observaciones','textarea']]},
-diagnostico:{t:'Diagnóstico',i:'clipboard2-pulse',r:[A,ME],f:[['vehiculo','Vehículo','ref','vehiculos'],['resultado','Resultado','select',['Sin anomalías','Con fallas','Requiere revisión adicional']],['hallazgos','Descripción / hallazgos','textarea']]},
-ordenes:{t:'Órdenes de trabajo',i:'tools',r:[A,R,ME],f:[['codigo','N° de orden'],['cliente','Cliente','ref','clientes'],['vehiculo','Vehículo','ref','vehiculos'],['estado','Estado','select',ESTADOS],['fecha','Fecha','date']]},
-mecanicos:{t:'Asignación de mecánicos',i:'person-gear',r:[A],f:[['orden','Orden de trabajo','ref','ordenes'],['mecanico','Mecánico','ref','usuarios',x=>x.rol==ME&&x.estado=='Activo'],['fecha','Fecha de asignación','date']]},
+diagnostico:{t:'Diagnóstico',i:'clipboard2-pulse',r:[A,ME],f:[['orden','Orden de trabajo','ref','ordenes',o=>o.estado=='Recibida'],['resultado','Resultado','select',['Sin anomalías','Con fallas','Requiere revisión adicional']],['hallazgos','Descripción / hallazgos','textarea']]},
+ordenes:{t:'Órdenes de trabajo',i:'tools',r:[A,R,ME],f:[['codigo','N° de orden'],['cliente','Cliente','ref','clientes'],['vehiculo','Vehículo','ref','vehiculos'],['estado','Estado','select',ESTADOS],['fecha','Fecha','date'],['motivo','Motivo / falla reportada','textarea']]},
+mecanicos:{t:'Asignación de mecánicos',i:'person-gear',r:[A,R],f:[['orden','Orden de trabajo','ref','ordenes',o=>o.estado=='Recibida'],['mecanico','Mecánico','ref','usuarios',x=>x.rol==ME&&x.estado=='Activo'],['fecha','Fecha de asignación','date']]},
 servicios:{t:'Gestión de servicios',i:'wrench-adjustable',r:[A,R],f:[['descripcion','Descripción'],['categoria','Categoría','select',['Mantenimiento','Reparación','Diagnóstico']],['precio','Precio (RD$)','number']]},
 repuestos:{t:'Gestión de repuestos',i:'gear',r:[A,ME],f:[['codigo','Código'],['descripcion','Descripción'],['stock','Stock','number'],['precio','Precio (RD$)','number']]},
 cotizaciones:{t:'Cotizaciones',i:'file-earmark-text',r:[A,R,F],f:[['orden','Orden de trabajo','ref','ordenes'],['descripcion','Servicio / repuesto'],['total','Total (RD$)','number'],['estado','Estado','select',['Pendiente','Aprobada','Rechazada']]]},
-aprobacion:{t:'Aprobación del cliente',i:'check2-circle',r:[A,R],f:[['cotizacion','Cotización','ref','cotizaciones'],['decision','Decisión','select',['Aprobada','Rechazada']],['fecha','Fecha','date'],['comentario','Observaciones del cliente','textarea']]},
-ejecucion:{t:'Ejecución del trabajo',i:'play-circle',r:[A,ME],f:[['orden','Orden de trabajo','ref','ordenes'],['etapa','Etapa','select',['Recepción','Diagnóstico','Repuestos','Ejecución','Finalización']],['notas','Notas del trabajo','textarea']]},
+aprobacion:{t:'Aprobación del cliente',i:'check2-circle',r:[A,R],f:[['cotizacion','Cotización','ref','cotizaciones',c=>c.estado=='Pendiente'],['decision','Decisión','select',['Aprobada','Rechazada']],['fecha','Fecha','date'],['comentario','Observaciones del cliente','textarea']]},
+ejecucion:{t:'Ejecución del trabajo',i:'play-circle',r:[A,ME],f:[['orden','Orden de trabajo','ref','ordenes',o=>['Aprobada','En ejecución'].includes(o.estado)],['etapa','Etapa','select',['Recepción','Diagnóstico','Repuestos','Ejecución','Finalización']],['notas','Notas del trabajo','textarea']]},
 facturacion:{t:'Facturación',i:'receipt',r:[A,F],f:[['numero','N° de factura'],['orden','Orden de trabajo','ref','ordenes'],['total','Total (RD$)','number'],['fecha','Fecha','date']]},
 pagos:{t:'Pagos',i:'credit-card',r:[A,F],f:[['factura','Factura','ref','facturacion'],['monto','Monto (RD$)','number'],['metodo','Método de pago','select',METODOS],['fecha','Fecha','date'],['detalle','Detalle']]},
 usuarios:{t:'Usuarios y roles',i:'person-badge',r:[A],f:[['usuario','Usuario'],['nombre','Nombre completo'],['clave','Contraseña','password'],['rol','Rol','select',Object.keys(ROLES)],['estado','Estado','select',['Activo','Inactivo']]]},
@@ -64,9 +64,9 @@ function shell(){
  const nav=Object.entries(M).filter(([k,m])=>m.r.includes(u.rol));
  $('#app').innerHTML=`<div class="d-flex"><aside class="offcanvas-md offcanvas-start sidebar" id="sb"><div class="p-3 brand"><i class="bi bi-gear-fill text-warning"></i> Taller<span style="color:var(--dorado)">Gest</span></div>
  <nav class="nav flex-column px-2 pb-3"><a class="nav-link ${pg=='dashboard'?'active':''}" href="dashboard.html"><i class="bi bi-house"></i>Inicio</a>${nav.map(([k,m])=>`<a class="nav-link ${k==pg?'active':''}" href="${k}.html"><i class="bi bi-${m.i}"></i>${m.t}</a>`).join('')}</nav></aside>
- <div class="flex-grow-1 min-vw-0"><header class="topbar d-flex align-items-center gap-2 px-3 py-2 bg-white shadow-sm"><button class="btn d-md-none" data-bs-toggle="offcanvas" data-bs-target="#sb"><i class="bi bi-list fs-4"></i></button><div class="ms-auto"></div>${u.rol==ME?'<div class="dropdown"><button class="btn btn-sm position-relative" id="bell" data-bs-toggle="dropdown"><i class="bi bi-bell fs-5"></i><span id="bn" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none"></span></button><ul class="dropdown-menu dropdown-menu-end p-0" id="bl" style="width:300px"></ul></div>':''}<span class="small text-muted">${esc(u.nombre)} · ${ROLES[u.rol]}</span><button class="btn btn-sm btn-outline-primary" id="out">Salir</button></header><main class="p-3 p-md-4" id="main"></main></div></div>`;
+ <div class="flex-grow-1 min-vw-0"><header class="topbar d-flex align-items-center gap-2 px-3 py-2 bg-white shadow-sm"><button class="btn d-md-none" data-bs-toggle="offcanvas" data-bs-target="#sb"><i class="bi bi-list fs-4"></i></button><div class="ms-auto"></div>${1?'<div class="dropdown"><button class="btn btn-sm position-relative" id="bell" data-bs-toggle="dropdown"><i class="bi bi-bell fs-5"></i><span id="bn" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none"></span></button><ul class="dropdown-menu dropdown-menu-end p-0" id="bl" style="width:300px"></ul></div>':''}<span class="small text-muted">${esc(u.nombre)} · ${ROLES[u.rol]}</span><button class="btn btn-sm btn-outline-primary" id="out">Salir</button></header><main class="p-3 p-md-4" id="main"></main></div></div>`;
  $('#out').onclick=()=>{log('Cierre de sesión','Login');sessionStorage.removeItem('tg_ses');location='index.html'};
- if(u.rol==ME){bell();$('#bell').addEventListener('click',()=>setTimeout(()=>{put('notif',get('notif').map(x=>x.para==u.id?{...x,leida:true}:x));$('#bn').classList.add('d-none')},50));addEventListener('storage',bell)}
+ {bell();$('#bell').addEventListener('click',()=>setTimeout(()=>{put('notif',get('notif').map(x=>x.para==u.id?{...x,leida:true}:x));$('#bn').classList.add('d-none')},50));addEventListener('storage',bell)}
  pg=='dashboard'?dash():pg=='reportes'?rep():pg=='configuracion'?cfg():crud(pg)}
 
 function bell(){
@@ -95,7 +95,7 @@ function cotBody(r,k){
  const fac=k=='facturacion',it=r&&r.items||[],sel=(t,id)=>it.find(x=>x.t==t&&x.id==id);
  const row=(t,x)=>{const s=sel(t,x.id);return `<div class="d-flex align-items-center gap-2 border-bottom py-1"><input type="checkbox" class="form-check-input ci" data-t="${t}" data-id="${x.id}" data-d="${esc(x.descripcion)}" data-p="${x.precio||0}" ${s?'checked':''}><span class="flex-grow-1 small">${esc(x.descripcion)}${t=='r'?` <span class="text-muted">(stock ${esc(x.stock)})</span>`:''}</span>${t=='r'?`<input type="number" min="1" value="${s?s.c:1}" class="form-control form-control-sm cq" style="width:68px">`:''}<span class="text-nowrap small">RD$ ${fmt(x.precio||0)}</span></div>`};
  const lista=(t,k2,vacio)=>get(k2).length?get(k2).map(x=>row(t,x)).join(''):`<div class="text-muted small py-2">${vacio}</div>`;
- const ordSel=`<select name="orden" class="form-select" required><option value="">Seleccionar...</option>${get('ordenes').map(o=>`<option value="${o.id}" ${r&&o.id==r.orden?'selected':''}>${esc(o.codigo)} · ${esc(nm('clientes',o.cliente))}</option>`).join('')}</select>`;
+ const ordSel=`<select name="orden" class="form-select" required><option value="">Seleccionar...</option>${get('ordenes').filter(o=>(r&&o.id==r.orden)||(fac?o.estado=='Finalizada':['Diagnosticada','Cotizada'].includes(o.estado))).map(o=>`<option value="${o.id}" ${r&&o.id==r.orden?'selected':''}>${esc(o.codigo)} · ${esc(nm('clientes',o.cliente))} · ${esc(nm('vehiculos',o.vehiculo))}</option>`).join('')}</select>`;
  const nums=get('facturacion').map(x=>parseInt(String(x.numero).replace(/\D/g,''))||0);
  const cab=fac?`<div class="row g-2"><div class="col-md-3"><label class="form-label">N° de factura</label><input name="numero" class="form-control" required value="${esc(r?r.numero:'FAC-'+String(Math.max(0,...nums)+1).padStart(3,'0'))}"></div><div class="col-md-6"><label class="form-label">Orden de trabajo</label>${ordSel}</div><div class="col-md-3"><label class="form-label">Fecha</label><input type="date" name="fecha" class="form-control" required value="${r?r.fecha:new Date().toISOString().slice(0,10)}"></div></div><div id="fh" class="small text-muted mt-1">Al elegir la orden se cargan los ítems de su cotización aprobada.</div>`
  :`<div class="row g-2"><div class="col-md-8"><label class="form-label">Orden de trabajo</label>${ordSel}</div><div class="col-md-4"><label class="form-label">Estado</label><select name="estado" class="form-select">${['Pendiente','Aprobada','Rechazada'].map(o=>`<option ${r&&r.estado==o?'selected':''}>${o}</option>`).join('')}</select></div></div>`;
@@ -117,7 +117,7 @@ const CAMPOS={'Efectivo':[['recibido','Efectivo recibido (RD$)','number']],
  'Transferencia':[['banco','Banco'],['referencia','N° de referencia']],
  'Cheque':[['banco','Banco'],['ncheque','N° de cheque']]};
 function pagoBody(r){
- return `<div class="row g-2"><div class="col-md-8"><label class="form-label">Factura</label><select name="factura" class="form-select" required><option value="">Seleccionar...</option>${get('facturacion').map(f=>`<option value="${f.id}" ${r&&f.id==r.factura?'selected':''}>${esc(f.numero)} · ${esc(nm('ordenes',f.orden))} · RD$ ${fmt(f.total)}</option>`).join('')}</select></div>
+ return `<div class="row g-2"><div class="col-md-8"><label class="form-label">Factura</label><select name="factura" class="form-select" required><option value="">Seleccionar...</option>${get('facturacion').filter(f=>(r&&f.id==r.factura)||Number(f.total)-pagado(f.id)>0.001).map(f=>`<option value="${f.id}" ${r&&f.id==r.factura?'selected':''}>${esc(f.numero)} · ${esc(nm('ordenes',f.orden))} · RD$ ${fmt(f.total)}</option>`).join('')}</select></div>
  <div class="col-md-4"><label class="form-label">Fecha</label><input type="date" name="fecha" class="form-control" required value="${r?r.fecha:new Date().toISOString().slice(0,10)}"></div></div>
  <div id="pr" class="bg-light rounded p-2 mt-2 small text-muted">Selecciona una factura.</div>
  <div class="row g-2 mt-1"><div class="col-md-6"><label class="form-label">Método de pago</label><select name="metodo" class="form-select" required>${METODOS.map(o=>`<option ${r&&r.metodo==o?'selected':''}>${o}</option>`).join('')}</select></div>
@@ -127,7 +127,7 @@ function pagoBody(r){
 function pagoBind(r){
  const g=n=>$('#fb [name='+n+']'),fa=()=>get('facturacion').find(x=>x.id==g('factura').value);
  const calc=()=>{const f=fa(),m=+g('monto').value||0;
-  if(!f){$('#pr').textContent='Selecciona una factura.';$('#pt').textContent='';$('#pt').className='';return}
+  if(!f){$('#pr').textContent=get('facturacion').some(x=>Number(x.total)-pagado(x.id)>0.001)?'Selecciona una factura.':'No hay facturas con saldo pendiente.';$('#pt').textContent='';$('#pt').className='';return}
   const pag=pagado(f.id,r&&r.id),saldo=Math.max(0,Number(f.total)-pag);
   $('#pr').innerHTML=`Total <b>RD$ ${fmt(f.total)}</b> · Pagado <b>RD$ ${fmt(pag)}</b> · Saldo <b>RD$ ${fmt(saldo)}</b>`;
   let t=`Saldo después de este pago: RD$ ${fmt(Math.max(0,saldo-m))}`,c='bg-light';
@@ -145,33 +145,92 @@ function cotCalc(){
  if($('#cs')){$('#cs').textContent=fmt(sub);$('#ci2').textContent=fmt(itbis);$('#ct').textContent=fmt(sub+itbis)}
  return {items,sub,itbis,total:sub+itbis}}
 
+const CV=['ordenes','recepcion','historial'];
+const hoy=()=>new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
+const sig=(k,c,pre)=>pre+String(Math.max(0,...get(k).map(x=>parseInt(String(x[c]).replace(/\D/g,''))||0))+1).padStart(3,'0');
+const lbl=(k,x)=>k=='ordenes'?`${x.codigo} · ${nm('clientes',x.cliente)} · ${nm('vehiculos',x.vehiculo)}`:k=='vehiculos'?`${x.placa} · ${x.marca} ${x.modelo}`:nm(k,x.id);
+/* Cliente → vehículos del cliente (selects dependientes con ficha) */
+function cvHTML(r){
+ const cid=r&&r.cliente?r.cliente:(r&&r.vehiculo?(get('vehiculos').find(v=>v.id==r.vehiculo)||{}).cliente:'');
+ return `<div class="row g-2 mt-1"><div class="col-md-6"><label class="form-label">Cliente</label><select name="cliente" id="cvc" class="form-select" required><option value="">Seleccionar...</option>${get('clientes').map(c=>`<option value="${c.id}" ${c.id==cid?'selected':''}>${esc(c.nombre)}</option>`).join('')}</select></div><div class="col-md-6"><label class="form-label">Vehículo</label><select name="vehiculo" id="cvv" class="form-select" required></select></div></div><div id="cvi" class="bg-light rounded p-2 mt-2 small text-muted"></div>`}
+function cvBind(r){
+ const c=$('#cvc'),v=$('#cvv'),i=$('#cvi');
+ const info=()=>{const cl=get('clientes').find(x=>x.id==c.value),ve=get('vehiculos').find(x=>x.id==v.value);
+  i.innerHTML=cl?`<b>${esc(cl.nombre)}</b> · Tel. ${esc(cl.telefono)} · ${esc(cl.correo)}${ve?`<br>Vehículo: ${esc(ve.marca)} ${esc(ve.modelo)} ${esc(ve.anio)} · Placa ${esc(ve.placa)}`:''}`:'Selecciona el cliente para ver sus vehículos.'};
+ const pintar=()=>{const l=get('vehiculos').filter(x=>x.cliente==c.value);
+  v.innerHTML=!c.value?'<option value="">Primero selecciona un cliente</option>':l.length?(l.length>1?'<option value="">Seleccionar...</option>':'')+l.map(x=>`<option value="${x.id}" ${r&&x.id==r.vehiculo?'selected':''}>${esc(x.placa)} · ${esc(x.marca)} ${esc(x.modelo)} ${esc(x.anio)}</option>`).join(''):'<option value="">Este cliente no tiene vehículos registrados</option>';info()};
+ c.onchange=pintar;v.onchange=info;pintar()}
+function histAuto(oid){
+ const o=get('ordenes').find(x=>x.id==oid);if(!o||get('historial').some(h=>h.orden==o.id))return;
+ const c=get('cotizaciones').find(x=>x.orden==o.id&&x.estado=='Aprobada'),as=get('mecanicos').find(a=>a.orden==o.id),rc=get('recepcion').filter(x=>x.vehiculo==o.vehiculo).pop(),h=get('historial');
+ h.push({id:Date.now(),vehiculo:o.vehiculo,cliente:o.cliente,fecha:hoy(),servicio:c?c.descripcion:'Trabajo según orden '+o.codigo,km:rc?rc.km:'',tecnico:as?nm('usuarios',as.mecanico):'',orden:o.id});put('historial',h)}
+/* Notificaciones y flujo automático entre áreas */
+function notif(para,texto){
+ const us=get('usuarios').filter(x=>x.estado=='Activo'&&(Array.isArray(para)?para.includes(x.rol):x.id==para)&&(!u||x.id!=u.id)),n=get('notif');
+ us.forEach(x=>n.unshift({id:Date.now()+Math.random(),para:x.id,texto,fecha:new Date().toLocaleString('es-DO'),leida:false}));put('notif',n.slice(0,300))}
+function avanzar(oid,e){const l=get('ordenes'),o=l.find(x=>x.id==oid);if(o&&ESTADOS.indexOf(e)>ESTADOS.indexOf(o.estado)){o.estado=e;put('ordenes',l)}}
+function chkStock(items){for(const x of items||[]){if(x.t!='r')continue;const r=get('repuestos').find(y=>y.id==x.id);if(r&&Number(r.stock)<x.c)return `Stock insuficiente de «${x.d}»: hay ${r.stock} y se necesitan ${x.c}.`}return null}
+function descontar(cid){const l=get('cotizaciones'),c=l.find(x=>x.id==cid);if(!c||c.stockDesc)return;const rs=get('repuestos');(c.items||[]).forEach(x=>{if(x.t=='r'){const r=rs.find(y=>y.id==x.id);if(r)r.stock=Math.max(0,Number(r.stock)-x.c)}});c.stockDesc=true;put('repuestos',rs);put('cotizaciones',l)}
+function aprobar(cid,dec){
+ const l=get('cotizaciones'),c=l.find(x=>x.id==cid);if(!c)return;c.estado=dec;put('cotizaciones',l);const ot=nm('ordenes',c.orden);
+ if(dec=='Aprobada'){descontar(cid);avanzar(c.orden,'Aprobada');notif([F,A],`Cotización aprobada de ${ot}: ya se puede facturar.`);const as=get('mecanicos').find(a=>a.orden==c.orden);if(as)notif(as.mecanico,`El cliente aprobó la cotización de ${ot}: puedes iniciar el trabajo.`)}
+ else if(dec=='Rechazada')notif([R,A],`El cliente rechazó la cotización de ${ot}.`)}
+function despues(k,r,old){
+ const ot=nm('ordenes',r.orden),nuevo=!old;
+ if(k=='recepcion'&&nuevo&&!r.orden){const l=get('ordenes'),o={id:Date.now(),codigo:sig('ordenes','codigo','OT-'),cliente:r.cliente,vehiculo:r.vehiculo,estado:'Recibida',fecha:r.fecha,motivo:r.obs||''};l.push(o);put('ordenes',l);const rl=get('recepcion');rl.find(y=>y.id==r.id).orden=o.id;put('recepcion',rl);return 'Se creó automáticamente la orden de trabajo '+o.codigo+' para este vehículo.'}
+ if(k=='mecanicos'&&(nuevo||old.mecanico!=r.mecanico||old.orden!=r.orden))notif(r.mecanico,`Se te asignó la orden ${ot} · Cliente: ${nm('clientes',(get('ordenes').find(o=>o.id==r.orden)||{}).cliente)}`);
+ if(k=='diagnostico'&&nuevo){avanzar(r.orden,'Diagnosticada');notif([R,A],`Diagnóstico completado de ${ot} (${r.resultado}). Falta crear la cotización.`)}
+ if(k=='cotizaciones'){avanzar(r.orden,'Cotizada');if(nuevo)notif([R],`Nueva cotización de ${ot} por RD$ ${fmt(r.total)}: pendiente de aprobación del cliente.`);if(r.estado!='Pendiente'&&(nuevo||old.estado!=r.estado))aprobar(r.id,r.estado)}
+ if(k=='aprobacion'){const c=get('cotizaciones').find(x=>x.id==r.cotizacion);if(c&&(nuevo||old.decision!=r.decision))aprobar(c.id,r.decision)}
+ if(k=='ejecucion'){if(r.etapa=='Ejecución')avanzar(r.orden,'En ejecución');if(r.etapa=='Finalización'){avanzar(r.orden,'Finalizada');histAuto(r.orden);notif([R,F,A],`Trabajo finalizado en ${ot}: ya se puede facturar y entregar el vehículo.`)}}
+ if(k=='facturacion'&&nuevo){avanzar(r.orden,'Facturada');notif([F,A],`Nueva factura ${r.numero} por RD$ ${fmt(r.total)} pendiente de cobro.`)}
+ if(k=='pagos'){const f=get('facturacion').find(x=>x.id==r.factura);if(f&&Number(f.total)-pagado(f.id)<=0.001){avanzar(f.orden,'Pagada');notif([R,A],`La factura ${f.numero} quedó pagada por completo.`)}}}
+function imprimir(fid){
+ const f=get('facturacion').find(x=>x.id==fid);if(!f)return;
+ const c=get('cfg',{}),o=get('ordenes').find(x=>x.id==f.orden)||{},ps=get('pagos').filter(p=>p.factura==f.id),its=f.items||[],pag=ps.reduce((a,p)=>a+Number(p.monto),0);
+ const w=window.open('','_blank');
+ w.document.write(`<html><head><title>${esc(f.numero)}</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="p-4"><h3 style="color:#1E3A6D">${esc(c.nombre||'TallerGest')}</h3><div class="text-muted">${esc(c.telefono||'')} ${esc(c.direccion||'')}</div><hr><h5>Factura ${esc(f.numero)}</h5><div>Fecha: ${esc(f.fecha)}<br>Orden: ${esc(o.codigo)} · Cliente: ${esc(nm('clientes',o.cliente))} · Vehículo: ${esc(nm('vehiculos',o.vehiculo))}</div>
+ <table class="table mt-3"><thead><tr><th>Descripción</th><th class="text-end">Cant.</th><th class="text-end">Precio</th><th class="text-end">Importe</th></tr></thead><tbody>${its.map(x=>`<tr><td>${esc(x.d)}</td><td class="text-end">${x.c}</td><td class="text-end">${fmt(x.p)}</td><td class="text-end">${fmt(x.p*x.c)}</td></tr>`).join('')}</tbody></table>
+ <div class="text-end">Subtotal: ${fmt(f.subtotal||f.total)}<br>ITBIS (18%): ${fmt(f.itbis||0)}<br><b>Total: RD$ ${fmt(f.total)}</b><br>Pagado: ${fmt(pag)}<br><b>Saldo: RD$ ${fmt(Math.max(0,f.total-pag))}</b></div>
+ ${ps.length?`<h6 class="mt-3">Pagos</h6><ul>${ps.map(p=>`<li>${esc(p.fecha)} · ${esc(p.metodo)} · RD$ ${fmt(p.monto)} ${esc(p.detalle||'')}</li>`).join('')}</ul>`:''}<script>onload=()=>setTimeout(print,800)<\/script></body></html>`);
+ w.document.close()}
+
 function crud(k){
  const m=M[k],cols=m.f.filter(f=>f[2]!='textarea').slice(0,5),noNew=m.ro||(u.rol==ME&&k=='ordenes');
- const ex=k=='facturacion'?[['Pagado',r=>fmt(pagado(r.id))],['Saldo',r=>fmt(Math.max(0,Number(r.total)-pagado(r.id)))],['Estado',r=>{const p=pagado(r.id);return bdg(p<=0?'Pendiente':p+0.001>=Number(r.total)?'Pagada':'Parcial')}]]:[];
+ const ex=k=='facturacion'?[['Pagado',r=>fmt(pagado(r.id))],['Saldo',r=>fmt(Math.max(0,Number(r.total)-pagado(r.id)))],['Estado',r=>{const p=pagado(r.id);return bdg(p<=0?'Pendiente':p+0.001>=Number(r.total)?'Pagada':'Parcial')}],['',r=>`<button class="btn btn-sm btn-outline-primary" data-p="${r.id}" title="Imprimir factura"><i class="bi bi-printer"></i></button>`]]:k=='pagos'?[['',r=>`<button class="btn btn-sm btn-outline-primary" data-p="${r.factura}" title="Imprimir factura"><i class="bi bi-printer"></i></button>`]]:k=='recepcion'||k=='historial'?[['Orden',r=>r.orden?esc(nm('ordenes',r.orden)):'—']]:[];
  const cell=(f,r)=>f[2]=='ref'?esc(nm(f[3],r[f[0]])):f[2]=='password'?'••••':['estado','decision','resultado'].includes(f[0])&&r[f[0]]?bdg(r[f[0]]):f[0]=='stock'&&r.stock!==undefined&&r.stock!==''?esc(r.stock)+(+r.stock<=5?' <span class="badge text-bg-danger">Bajo</span>':''):(f[0]=='total'||f[0]=='monto')&&r[f[0]]!==undefined&&r[f[0]]!==''?fmt(r[f[0]]):esc(r[f[0]]);
  const inp=(f,v)=>{const n=`name="${f[0]}" class="form-control" `,req=f[2]=='textarea'?'':'required';
+  if(k=='ordenes'&&f[0]=='codigo')return `<input name="codigo" class="form-control" readonly value="${v||sig('ordenes','codigo','OT-')}"><div class="form-text">Se genera automáticamente.</div>`;
+  if(k=='ordenes'&&f[0]=='estado')return u.rol==A&&v?`<select name="estado" class="form-select">${ESTADOS.map(o=>`<option ${o==v?'selected':''}>${o}</option>`).join('')}</select>`:`<div>${bdg(v||'Recibida')}<input type="hidden" name="estado" value="${v||'Recibida'}"></div><div class="form-text">El estado cambia solo según avance el trabajo. Solo el administrador puede corregirlo.</div>`;
   if(f[2]=='textarea')return `<textarea ${n}rows="3">${esc(v)}</textarea>`;
-  if(f[2]=='select')return `<select name="${f[0]}" class="form-select" required>${f[3].map(o=>`<option value="${o}" ${o==v?'selected':''}>${o=='admin'||ROLES[o]?ROLES[o]||o:o}</option>`).join('')}</select>`;
-  if(f[2]=='ref'){const l=vis(f[3],get(f[3])).filter(x=>!f[4]||f[4](x)||x.id==v);return `<select name="${f[0]}" class="form-select" required><option value="">Seleccionar...</option>${l.map(x=>`<option value="${x.id}" ${x.id==v?'selected':''}>${esc(nm(f[3],x.id))}</option>`).join('')}</select>`}
+  if(f[2]=='select')return `<select name="${f[0]}" class="form-select" required>${(f[0]=='estado'&&k=='ordenes'&&v&&u.rol!=A?f[3].slice(Math.max(0,f[3].indexOf(v))):f[3]).map(o=>`<option value="${o}" ${o==v?'selected':''}>${o=='admin'||ROLES[o]?ROLES[o]||o:o}</option>`).join('')}</select>`;
+  if(f[2]=='ref'){const l=vis(f[3],get(f[3])).filter(x=>!f[4]||f[4](x)||x.id==v);return `<select name="${f[0]}" class="form-select" required><option value="">Seleccionar...</option>${l.map(x=>`<option value="${x.id}" ${x.id==v?'selected':''}>${esc(lbl(f[3],x))}</option>`).join('')}</select>`}
   return `<input ${n}type="${f[2]||'text'}" ${f[2]=='number'?'step="any"':''} value="${esc(v)}" ${req}>`};
  $('#main').innerHTML=`<div class="d-flex justify-content-between mb-3"><h4>${m.t}</h4>${noNew?'':'<button class="btn btn-warning" id="nw"><i class="bi bi-plus-lg"></i> Nuevo</button>'}</div>
- <input id="q" class="form-control mb-3" placeholder="Buscar...">
- <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr>${cols.map(c=>`<th>${c[1]}</th>`).join('')}${ex.map(e=>`<th>${e[0]}</th>`).join('')}${m.ro?'':'<th></th>'}</tr></thead><tbody id="tb"></tbody></table></div></div>
+ <div class="row g-2 mb-3"><div class="col"><input id="q" class="form-control" placeholder="Buscar..."></div>${k=='historial'?`<div class="col-md-5"><select id="fv" class="form-select"><option value="">Todos los vehículos</option>${get('vehiculos').map(v=>`<option value="${v.id}">${esc(v.placa)} · ${esc(v.marca)} ${esc(v.modelo)} · ${esc(nm('clientes',v.cliente))}</option>`).join('')}</select></div>`:''}</div>
+ <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr>${cols.map(c=>`<th>${c[1]}</th>`).join('')}${ex.map(e=>`<th>${e[0]}</th>`).join('')}${noNew?'':'<th></th>'}</tr></thead><tbody id="tb"></tbody></table></div></div>
  <div class="modal fade" id="md" tabindex="-1"><div class="modal-dialog ${k=='cotizaciones'||k=='facturacion'||k=='pagos'?'modal-lg':''}"><form class="modal-content" id="f"><div class="modal-header"><h5 class="modal-title">${m.t}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="fb"></div><div class="modal-footer"><div id="err" class="text-danger small me-auto"></div><button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-warning">Guardar</button></div></form></div></div>`;
  const modal=new bootstrap.Modal('#md');let cur=null;
- const draw=()=>{const q=$('#q').value.toLowerCase(),rows=vis(k,get(k)).filter(r=>cols.some(c=>cell(c,r).replace(/<[^>]+>/g,'').toLowerCase().includes(q)));
-  $('#tb').innerHTML=rows.length?rows.map(r=>`<tr>${cols.map(c=>`<td>${cell(c,r)}</td>`).join('')}${ex.map(e=>`<td>${e[1](r)}</td>`).join('')}${m.ro?'':`<td class="text-end text-nowrap"><button class="btn btn-sm btn-outline-primary" data-e="${r.id}"><i class="bi bi-pencil"></i></button>${noNew?'':` <button class="btn btn-sm btn-outline-danger" data-d="${r.id}"><i class="bi bi-trash"></i></button>`}</td>`}</tr>`).join(''):`<tr><td colspan="9" class="text-center text-muted py-4">Sin registros. ${m.ro?'':'Usa «Nuevo» para agregar el primero.'}</td></tr>`};
- const open=r=>{cur=r;$('#err').textContent='';if(k=='cotizaciones'||k=='facturacion'){$('#fb').innerHTML=cotBody(r,k);['input','change'].forEach(ev=>$('#fb').addEventListener(ev,cotCalc));if(k=='facturacion')$('#fb').querySelector('[name=orden]').addEventListener('change',facCarga);cotCalc()}else $('#fb').innerHTML=m.f.map(f=>`<label class="form-label mt-2">${f[1]}</label>${inp(f,r?r[f[0]]:'')}`).join('');if(k=='pagos'){$('#fb').innerHTML=pagoBody(r);pagoBind(r)}modal.show()};
- draw();$('#q').oninput=draw;
+ const draw=()=>{const q=$('#q').value.toLowerCase(),fv=$('#fv')?$('#fv').value:'',rows=vis(k,get(k)).filter(r=>(!fv||r.vehiculo==fv)&&cols.some(c=>cell(c,r).replace(/<[^>]+>/g,'').toLowerCase().includes(q))).sort((a,b)=>k=='historial'?String(b.fecha).localeCompare(String(a.fecha)):0);
+  $('#tb').innerHTML=rows.length?rows.map(r=>`<tr>${cols.map(c=>`<td>${cell(c,r)}</td>`).join('')}${ex.map(e=>`<td>${e[1](r)}</td>`).join('')}${noNew?'':`<td class="text-end text-nowrap"><button class="btn btn-sm btn-outline-primary" data-e="${r.id}"><i class="bi bi-pencil"></i></button>${noNew?'':` <button class="btn btn-sm btn-outline-danger" data-d="${r.id}"><i class="bi bi-trash"></i></button>`}</td>`}</tr>`).join(''):`<tr><td colspan="9" class="text-center text-muted py-4">Sin registros. ${m.ro?'':'Usa «Nuevo» para agregar el primero.'}</td></tr>`};
+ const campos=r=>m.f.map(f=>{const cv=CV.includes(k),tc=m.f.some(x=>x[0]=='cliente');
+  if(cv&&(f[0]=='cliente'||(f[0]=='vehiculo'&&!tc)))return cvHTML(r);
+  if(cv&&f[0]=='vehiculo')return '';
+  return `<label class="form-label mt-2">${f[1]}</label>${inp(f,r?r[f[0]]:(f[2]=='date'?hoy():''))}`}).join('');
+ const open=r=>{cur=r;$('#err').textContent='';if(k=='cotizaciones'||k=='facturacion'){$('#fb').innerHTML=cotBody(r,k);['input','change'].forEach(ev=>$('#fb').addEventListener(ev,cotCalc));if(k=='facturacion')$('#fb').querySelector('[name=orden]').addEventListener('change',facCarga);cotCalc()}else $('#fb').innerHTML=campos(r);if(k=='pagos'){$('#fb').innerHTML=pagoBody(r);pagoBind(r)}if(CV.includes(k))cvBind(r);modal.show()};
+ draw();$('#q').oninput=draw;if($('#fv'))$('#fv').onchange=draw;
  if(!noNew)$('#nw').onclick=()=>open(null);
  $('#tb').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.p)return imprimir(b.dataset.p);
   if(b.dataset.e)return open(get(k).find(x=>x.id==b.dataset.e));
   const r=get(k).find(x=>x.id==b.dataset.d),rest=get(k).filter(x=>x.id!=r.id);
   if(k=='usuarios'){if(r.id==u.id)return alert('No puedes eliminar tu propio usuario.');const er=chkUsuarios(rest,r);if(er)return alert(er)}
   if(k=='facturacion'&&pagado(r.id))return alert('Esta factura tiene pagos registrados. Elimina primero sus pagos.');
   if(!confirm('¿Eliminar este registro?'))return;put(k,rest);log('Eliminó registro',k);draw()};
  $('#f').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));let l=get(k);
-  if(k=='cotizaciones'||k=='facturacion'){if(k=='facturacion'&&l.some(x=>x.numero==d.numero&&(!cur||x.id!=cur.id)))return $('#err').textContent='Ese número de factura ya existe.';const c=cotCalc();if(!c.items.length)return $('#err').textContent='Selecciona al menos un servicio o repuesto.';Object.assign(d,{items:c.items,subtotal:c.sub,itbis:c.itbis,total:c.total,descripcion:c.items.map(x=>x.d+(x.c>1?' x'+x.c:'')).join(', ')})}
+  if(k=='cotizaciones'||k=='facturacion'){if(k=='facturacion'&&l.some(x=>x.numero==d.numero&&(!cur||x.id!=cur.id)))return $('#err').textContent='Ese número de factura ya existe.';const c=cotCalc();if(!c.items.length)return $('#err').textContent='Selecciona al menos un servicio o repuesto.';if(k=='cotizaciones'&&d.estado=='Aprobada'&&!(cur&&cur.stockDesc)){const er=chkStock(c.items);if(er)return $('#err').textContent=er}Object.assign(d,{items:c.items,subtotal:c.sub,itbis:c.itbis,total:c.total,descripcion:c.items.map(x=>x.d+(x.c>1?' x'+x.c:'')).join(', ')})}
+  if(k=='diagnostico'){const o=get('ordenes').find(x=>x.id==d.orden);if(o)d.vehiculo=o.vehiculo}
+  if(k=='aprobacion'&&d.decision=='Aprobada'){const c=get('cotizaciones').find(x=>x.id==d.cotizacion);if(c&&!c.stockDesc){const er=chkStock(c.items);if(er)return $('#err').textContent=er}}
   if(k=='pagos'){const f=get('facturacion').find(x=>x.id==d.factura),m=+d.monto,saldo=Number(f.total)-pagado(f.id,cur&&cur.id);
   if(m>saldo+0.001)return $('#err').textContent='El monto supera el saldo de la factura.';
   if(d.metodo=='Efectivo'&&+d.recibido<m)return $('#err').textContent='El efectivo recibido es menor al monto a pagar.';
@@ -182,8 +241,8 @@ function crud(k){
   const nl=cur?l.map(x=>x.id==cur.id?reg:x):[...l,reg];
   if(k=='usuarios'){if(nl.filter(x=>x.usuario==reg.usuario).length>1)return $('#err').textContent='Ese nombre de usuario ya existe.';
    const er=chkUsuarios(nl,reg);if(er)return $('#err').textContent=er}
-  if(k=='mecanicos'&&(!cur||cur.mecanico!=reg.mecanico||cur.orden!=reg.orden)){const n=get('notif'),o=get('ordenes').find(x=>x.id==reg.orden)||{};n.unshift({id:Date.now(),para:reg.mecanico,texto:'Se te asignó la orden '+nm('ordenes',reg.orden)+' · Cliente: '+nm('clientes',o.cliente),fecha:new Date().toLocaleString('es-DO'),leida:false});put('notif',n)}
-  put(k,nl);log(cur?'Editó registro':'Creó registro',k);modal.hide();draw()}}
+  
+  put(k,nl);log(cur?'Editó registro':'Creó registro',k);const msg=despues(k,reg,cur);modal.hide();draw();if(msg)alert(msg)}}
 
 if(pg=='login')login();
 else if(!u)location='index.html';
