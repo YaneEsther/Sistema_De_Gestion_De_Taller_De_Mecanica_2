@@ -1,0 +1,22 @@
+:root{--azul:#1E3A6D;--dorado:#D18B00;--claro:#E9EDF2;--medio:#6B7280;--oscuro:#1F2937;--bs-primary:#1E3A6D;--bs-primary-rgb:30,58,109}
+body{background:var(--claro);color:var(--oscuro);font-family:system-ui,"Segoe UI",Roboto,sans-serif}
+.btn-primary{--bs-btn-bg:var(--azul);--bs-btn-border-color:var(--azul);--bs-btn-hover-bg:var(--oscuro);--bs-btn-hover-border-color:var(--oscuro);--bs-btn-active-bg:var(--oscuro)}
+.btn-outline-primary{--bs-btn-color:var(--azul);--bs-btn-border-color:var(--azul);--bs-btn-hover-bg:var(--azul);--bs-btn-hover-border-color:var(--azul)}
+.btn-warning{--bs-btn-bg:var(--dorado);--bs-btn-border-color:var(--dorado);--bs-btn-color:#fff;--bs-btn-hover-bg:#b87800;--bs-btn-hover-border-color:#b87800;--bs-btn-hover-color:#fff;--bs-btn-active-bg:#b87800;--bs-btn-active-color:#fff}
+.form-control:focus,.form-select:focus{border-color:var(--azul);box-shadow:0 0 0 .2rem rgba(30,58,109,.2)}
+.sidebar{width:250px;flex:none;background-color:var(--azul)!important;min-height:100vh}
+.sidebar.offcanvas-md{--bs-offcanvas-width:250px;--bs-offcanvas-bg:#1E3A6D;--bs-offcanvas-color:#E9EDF2}
+.brand{font-size:1.4rem;font-weight:700;color:#fff}
+.sidebar .nav-link{color:var(--claro);border-radius:.4rem;margin-bottom:2px;font-size:.92rem}
+.sidebar .nav-link i{margin-right:.5rem}
+.sidebar .nav-link:hover{background:rgba(255,255,255,.1)}
+.sidebar .nav-link.active{background:rgba(255,255,255,.18);box-shadow:inset 3px 0 0 var(--dorado);font-weight:600}
+.topbar{position:sticky;top:0;z-index:5}
+.card{border:0;box-shadow:0 1px 4px rgba(30,58,109,.12)}
+.table thead th{color:var(--medio);font-weight:600;font-size:.85rem;background:#fff}
+.stat i{font-size:2rem;color:var(--azul)}
+.stat .n{font-size:1.9rem;font-weight:700}
+.login-bg{min-height:100vh;background:linear-gradient(135deg,var(--oscuro),var(--azul));display:flex;align-items:center;justify-content:center;padding:1rem}
+.login-card{width:100%;max-width:400px}
+.logo{font-size:2rem;font-weight:800;color:var(--azul)}.logo span{color:var(--dorado)}
+@media print{.sidebar,.topbar,.no-print{display:none!important}}

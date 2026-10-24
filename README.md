@@ -1,1 +1,0 @@
-# Sistema_De_Gestion_De_Taller_De_Mecanica_2
