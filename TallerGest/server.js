@@ -1,4 +1,5 @@
 /* TallerGest – servidor (Express + Postgres/Neon). Sirve el frontend de /public y la API /api */
+require('./loadenv');
 const express = require('express'), bcrypt = require('bcryptjs'), jwt = require('jsonwebtoken'), path = require('path'), crypto = require('crypto');
 const { pool, SCHEMA, COLS, init, aObjeto, guardar, traducir } = require('./db');
 
