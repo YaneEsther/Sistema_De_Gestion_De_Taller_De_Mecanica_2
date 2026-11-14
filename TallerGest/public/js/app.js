@@ -1,4 +1,4 @@
-/* TallerGest – lógica completa (datos en el servidor, SQLite) */
+/* TallerGest – lógica completa (datos en el servidor, Postgres/Neon) */
 const $=s=>document.querySelector(s);
 let DB={},pend=0;const SNAP={};
 const tk=()=>(JSON.parse(sessionStorage.getItem('tg_ses')||'null')||{}).token;
@@ -9,12 +9,14 @@ async function api(m,url,body){
  if(!r.ok)throw new Error(j.error||'Error del servidor');return j}
 const get=(k,d=[])=>DB[k]??d;
 const snap=a=>new Map(a.map(x=>[String(x.id),JSON.stringify(x)]));
-function send(k,b){pend++;api('POST','/api/data/'+k,b).catch(e=>{if(e.message!='401')alert('No se pudo guardar: '+e.message+'. Se recargarán los datos.');cargar().then(()=>window.__redraw&&window.__redraw()).catch(()=>{})}).finally(()=>pend--)}
+let Q=Promise.resolve();
+function send(k,b){pend++;const p=Q.then(()=>api('POST','/api/data/'+k,b));Q=p.catch(()=>{});
+ return p.then(()=>true,e=>{if(e.message!='401')alert('No se pudo guardar: '+e.message+'. Se recargarán los datos.');return cargar().then(()=>window.__redraw&&window.__redraw()).catch(()=>{}).then(()=>false)}).finally(()=>{pend--})}
 const put=(k,v)=>{
- DB[k]=v;if(k=='cfg'){send(k,{up:[{id:'cfg',...v}],del:[]});return}
+ DB[k]=v;if(k=='cfg')return send(k,{up:[{id:'cfg',...v}],del:[]});
  const prev=SNAP[k]||new Map(),nw=snap(v);
  const up=v.filter(x=>prev.get(String(x.id))!==nw.get(String(x.id))),del=[...prev.keys()].filter(id=>!nw.has(id));
- SNAP[k]=nw;if(up.length||del.length)send(k,{up,del})};
+ SNAP[k]=nw;return up.length||del.length?send(k,{up,del}):Promise.resolve(true)};
 async function cargar(){const d=await api('GET','/api/data');d.cfg=d.cfg&&d.cfg[0]?(({id,...r})=>r)(d.cfg[0]):{};DB=d;for(const k in d)if(Array.isArray(d[k]))SNAP[k]=snap(d[k])}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ROLES={admin:'Administrador',mecanico:'Mecánico',recepcion:'Recepcionista',facturador:'Facturador'};
@@ -125,7 +127,7 @@ function cfg(){
  <div class="mt-3"><button class="btn btn-outline-primary" id="bk"><i class="bi bi-download"></i> Descargar respaldo de la base de datos</button></div>`;
  $('#lf').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,300/im.width),cv=document.createElement('canvas');cv.width=im.width*k;cv.height=im.height*k;cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);logoData=cv.toDataURL('image/png');$('#lp').src=logoData};im.src=r.result};r.readAsDataURL(f)};
  $('#f').onsubmit=e=>{e.preventDefault();put('cfg',{...Object.fromEntries(new FormData(e.target)),logo:logoData});log('Configuración actualizada','configuracion');$('#ok').textContent='Guardado'};
- $('#bk').onclick=async()=>{const r=await fetch('/api/respaldo',{headers:{Authorization:'Bearer '+tk()}});if(!r.ok)return alert('No se pudo generar el respaldo.');const b=await r.blob(),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='tallergest-respaldo-'+hoy()+'.db';a.click()}}
+ $('#bk').onclick=async()=>{const r=await fetch('/api/respaldo',{headers:{Authorization:'Bearer '+tk()}});if(!r.ok)return alert('No se pudo generar el respaldo.');const b=await r.blob(),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='tallergest-respaldo-'+hoy()+'.json';a.click()}}
 
 
 /* Cotizaciones: selección de servicios y repuestos con cálculo automático (ITBIS 18%) */
@@ -239,13 +241,20 @@ function imprimir(fid){
  abrir('Factura '+f.numero,cab(o,`<b>Fecha:</b> ${esc(f.fecha)}<br><b>Orden:</b> ${esc(o.codigo)}<br>${saldo<=0.001?'<span class="badge text-bg-success">PAGADA</span>':''}`)+tabItems(f)+`<div class="text-end mt-2">Pagado: ${fmt(pag)}<br><b>Saldo: RD$ ${fmt(saldo)}</b></div>${ps.length?`<h6 class="mt-3">Pagos</h6><ul class="small">${ps.map(p=>`<li>${esc(p.fecha)} · ${esc(p.metodo)} · RD$ ${fmt(p.monto)} ${esc(p.detalle||'')}</li>`).join('')}</ul>`:''}`)}
 function imprimirCot(cid){
  const c=get('cotizaciones').find(x=>x.id==cid);if(!c)return;const o=get('ordenes').find(x=>x.id==c.orden)||{};
- abrir('Cotización '+(o.codigo||''),cab(o,`<b>Fecha:</b> ${new Date(Number(c.id)||Date.now()).toLocaleDateString('es-DO')}<br><b>Orden:</b> ${esc(o.codigo)}<br><b>Estado:</b> ${esc(c.estado)}`)+tabItems(c)+'<p class="small text-muted mt-3">Esta cotización es válida por 15 días a partir de su fecha de emisión.</p><div class="row mt-5 pt-4 text-center"><div class="col-6"><hr class="mx-4">Firma del taller</div><div class="col-6"><hr class="mx-4">Aceptado por el cliente</div></div>')}
+ abrir('Cotización '+(o.codigo||''),cab(o,`<b>Fecha:</b> ${new Date(c.creado||Number(c.id)||Date.now()).toLocaleDateString('es-DO')}<br><b>Orden:</b> ${esc(o.codigo)}<br><b>Estado:</b> ${esc(c.estado)}`)+tabItems(c)+'<p class="small text-muted mt-3">Esta cotización es válida por 15 días a partir de su fecha de emisión.</p><div class="row mt-5 pt-4 text-center"><div class="col-6"><hr class="mx-4">Firma del taller</div><div class="col-6"><hr class="mx-4">Aceptado por el cliente</div></div>')}
 async function xlsx(nombre,hojas){
  if(!window.XLSX)await new Promise((ok,er)=>{const t=document.createElement('script');t.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';t.onload=ok;t.onerror=er;document.head.appendChild(t)}).catch(()=>alert('No se pudo cargar el generador de Excel (requiere internet).'));
  if(!window.XLSX)return;const wb=XLSX.utils.book_new();for(const h in hojas)XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(hojas[h]),h);XLSX.writeFile(wb,nombre+'.xlsx')}
+/* Fotos de recepción: se reducen en el navegador (máx. 1280 px, JPEG) y se piden con el token de sesión */
+const FU=new Map();
+async function fotoURL(id){if(FU.has(id))return FU.get(id);const r=await fetch('/api/fotos/'+id,{headers:{Authorization:'Bearer '+tk()}});if(!r.ok)throw new Error('foto');const u=URL.createObjectURL(await r.blob());FU.set(id,u);return u}
+function comprimir(file,max=1280,q=.78){return new Promise((ok,er)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height)),cv=document.createElement('canvas');cv.width=Math.round(im.width*k);cv.height=Math.round(im.height*k);cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);URL.revokeObjectURL(u);cv.toBlob(b=>b?ok(b):er(),'image/jpeg',q)};im.onerror=()=>{URL.revokeObjectURL(u);er()};im.src=u})}
+async function subirFotos(id,fs){
+ for(const f of fs){try{const d=await new Promise((ok,er)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=er;r.readAsDataURL(f.blob)});await api('POST','/api/recepcion/'+id+'/fotos',{nombre:f.nombre,tipo:'image/jpeg',datos:d})}catch(e){if(e.message!='401')alert('No se pudo subir una foto: '+e.message)}}
+ await Q;await cargar().catch(()=>{});window.__redraw&&window.__redraw()}
 function crud(k){
  const m=M[k],cols=m.f.filter(f=>f[2]!='textarea').slice(0,5),noNew=m.ro||(u.rol==ME&&k=='ordenes');
- const ex=k=='facturacion'?[['Pagado',r=>fmt(pagado(r.id))],['Saldo',r=>fmt(Math.max(0,Number(r.total)-pagado(r.id)))],['Estado',r=>{const p=pagado(r.id);return bdg(p<=0?'Pendiente':p+0.001>=Number(r.total)?'Pagada':'Parcial')}],['',r=>`<button class="btn btn-sm btn-outline-primary" data-p="${r.id}" title="Imprimir factura"><i class="bi bi-printer"></i></button>`]]:k=='pagos'?[['',r=>`<button class="btn btn-sm btn-outline-primary" data-p="${r.factura}" title="Imprimir factura"><i class="bi bi-printer"></i></button>`]]:k=='recepcion'||k=='historial'?[['Orden',r=>r.orden?esc(nm('ordenes',r.orden)):'—']]:k=='cotizaciones'?[['',r=>`<button class="btn btn-sm btn-outline-primary" data-pc="${r.id}" title="Imprimir cotización"><i class="bi bi-printer"></i></button>`]]:[];
+ const ex=k=='facturacion'?[['Pagado',r=>fmt(pagado(r.id))],['Saldo',r=>fmt(Math.max(0,Number(r.total)-pagado(r.id)))],['Estado',r=>{const p=pagado(r.id);return bdg(p<=0?'Pendiente':p+0.001>=Number(r.total)?'Pagada':'Parcial')}],['',r=>`<button class="btn btn-sm btn-outline-primary" data-p="${r.id}" title="Imprimir factura"><i class="bi bi-printer"></i></button>`]]:k=='pagos'?[['',r=>`<button class="btn btn-sm btn-outline-primary" data-p="${r.factura}" title="Imprimir factura"><i class="bi bi-printer"></i></button>`]]:k=='recepcion'?[['Orden',r=>r.orden?esc(nm('ordenes',r.orden)):'—'],['Fotos',r=>r.fotos&&r.fotos.length?`<span class="badge text-bg-secondary"><i class="bi bi-camera"></i> ${r.fotos.length}</span>`:'—']]:k=='historial'?[['Orden',r=>r.orden?esc(nm('ordenes',r.orden)):'—']]:k=='cotizaciones'?[['',r=>`<button class="btn btn-sm btn-outline-primary" data-pc="${r.id}" title="Imprimir cotización"><i class="bi bi-printer"></i></button>`]]:[];
  const cell=(f,r)=>f[2]=='ref'?esc(nm(f[3],r[f[0]])):f[2]=='password'?'••••':['estado','decision','resultado'].includes(f[0])&&r[f[0]]?bdg(r[f[0]]):f[0]=='stock'&&r.stock!==undefined&&r.stock!==''?esc(r.stock)+(+r.stock<=5?' <span class="badge text-bg-danger">Bajo</span>':''):(f[0]=='total'||f[0]=='monto')&&r[f[0]]!==undefined&&r[f[0]]!==''?fmt(r[f[0]]):esc(r[f[0]]);
  const inp=(f,v)=>{const n=`name="${f[0]}" class="form-control" `,req=f[2]=='textarea'?'':'required';
   if(k=='ordenes'&&f[0]=='codigo')return `<input name="codigo" class="form-control" readonly value="${v||sig('ordenes','codigo','OT-')}"><div class="form-text">Se genera automáticamente.</div>`;
@@ -258,14 +267,27 @@ function crud(k){
  <div class="row g-2 mb-3"><div class="col"><input id="q" class="form-control" placeholder="Buscar..."></div>${k=='historial'?`<div class="col-md-5"><select id="fv" class="form-select"><option value="">Todos los vehículos</option>${get('vehiculos').map(v=>`<option value="${v.id}">${esc(v.placa)} · ${esc(v.marca)} ${esc(v.modelo)} · ${esc(nm('clientes',v.cliente))}</option>`).join('')}</select></div>`:''}</div>
  <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr>${cols.map(c=>`<th>${c[1]}</th>`).join('')}${ex.map(e=>`<th>${e[0]}</th>`).join('')}${noNew?'':'<th></th>'}</tr></thead><tbody id="tb"></tbody></table></div></div>
  <div class="modal fade" id="md" tabindex="-1"><div class="modal-dialog ${k=='cotizaciones'||k=='facturacion'||k=='pagos'?'modal-lg':''}"><form class="modal-content" id="f"><div class="modal-header"><h5 class="modal-title">${m.t}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="fb"></div><div class="modal-footer"><div id="err" class="text-danger small me-auto"></div><button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-warning">Guardar</button></div></form></div></div>`;
- const modal=new bootstrap.Modal('#md');let cur=null;
+ const modal=new bootstrap.Modal('#md');let cur=null,nuevas=[];
+ const fotosHTML=()=>`<label class="form-label mt-3"><i class="bi bi-camera"></i> Fotos del vehículo (evidencia de cómo lo entregan)</label><input type="file" id="ff" accept="image/*" multiple class="form-control"><div class="form-text">Puedes elegir o tomar varias. Se reducen automáticamente. Máximo 12 por recepción.</div><div id="fg" class="d-flex flex-wrap gap-2 mt-2"></div>`;
+ const fotosBind=r=>{
+  const g=$('#fg'),ya=()=>(r&&(get('recepcion').find(x=>x.id==r.id)||{}).fotos)||[],st='style="width:96px;height:72px;object-fit:cover;border-radius:8px;cursor:zoom-in;background:#eee"',bx='class="btn btn-sm btn-danger position-absolute top-0 end-0 py-0 px-1"';
+  const pinta=()=>{g.innerHTML=ya().map(f=>`<div class="position-relative"><img data-f="${f.id}" alt="" ${st}><button type="button" data-fd="${f.id}" ${bx}>×</button></div>`).join('')+nuevas.map((n,i)=>`<div class="position-relative"><img src="${n.url}" alt="" ${st}><span class="badge text-bg-warning position-absolute bottom-0 start-0">nueva</span><button type="button" data-fn="${i}" ${bx}>×</button></div>`).join('');
+   g.querySelectorAll('img[data-f]').forEach(im=>fotoURL(im.dataset.f).then(u=>{im.src=u}).catch(()=>{}))};
+  $('#ff').onchange=async e=>{const fs=[...e.target.files].slice(0,Math.max(0,12-ya().length-nuevas.length));
+   for(const f of fs){try{const b=await comprimir(f);nuevas.push({blob:b,nombre:f.name,url:URL.createObjectURL(b)})}catch{alert('No se pudo leer la imagen «'+f.name+'».')}}
+   e.target.value='';pinta()};
+  g.onclick=async e=>{const im=e.target.closest('img'),b=e.target.closest('button');
+   if(b&&b.dataset.fn!==undefined){nuevas.splice(+b.dataset.fn,1);return pinta()}
+   if(b&&b.dataset.fd){if(!confirm('¿Eliminar esta foto?'))return;try{await api('DELETE','/api/fotos/'+b.dataset.fd);const rr=get('recepcion').find(x=>x.id==r.id);if(rr)rr.fotos=rr.fotos.filter(f=>f.id!=b.dataset.fd);pinta()}catch(x){alert(x.message)}return}
+   if(im&&im.src)window.open(im.src,'_blank')};
+  pinta()};
  const draw=()=>{const q=$('#q').value.toLowerCase(),fv=$('#fv')?$('#fv').value:'',rows=vis(k,get(k)).filter(r=>(!fv||r.vehiculo==fv)&&cols.some(c=>cell(c,r).replace(/<[^>]+>/g,'').toLowerCase().includes(q))).sort((a,b)=>k=='historial'?String(b.fecha).localeCompare(String(a.fecha)):0);
   $('#tb').innerHTML=rows.length?rows.map(r=>`<tr>${cols.map(c=>`<td>${cell(c,r)}</td>`).join('')}${ex.map(e=>`<td>${e[1](r)}</td>`).join('')}${noNew?'':`<td class="text-end text-nowrap"><button class="btn btn-sm btn-outline-primary" data-e="${r.id}"><i class="bi bi-pencil"></i></button>${noNew?'':` <button class="btn btn-sm btn-outline-danger" data-d="${r.id}"><i class="bi bi-trash"></i></button>`}</td>`}</tr>`).join(''):`<tr><td colspan="9" class="text-center text-muted py-4">Sin registros. ${m.ro?'':'Usa «Nuevo» para agregar el primero.'}</td></tr>`};
  const campos=r=>m.f.map(f=>{const cv=CV.includes(k),tc=m.f.some(x=>x[0]=='cliente');
   if(cv&&(f[0]=='cliente'||(f[0]=='vehiculo'&&!tc)))return cvHTML(r);
   if(cv&&f[0]=='vehiculo')return '';
   return `<label class="form-label mt-2">${f[1]}</label>${inp(f,r?r[f[0]]:(f[2]=='date'?hoy():''))}`}).join('');
- const open=r=>{cur=r;$('#err').textContent='';if(k=='cotizaciones'||k=='facturacion'){$('#fb').innerHTML=cotBody(r,k);['input','change'].forEach(ev=>$('#fb').addEventListener(ev,cotCalc));if(k=='facturacion')$('#fb').querySelector('[name=orden]').addEventListener('change',facCarga);cotCalc()}else $('#fb').innerHTML=campos(r);if(k=='pagos'){$('#fb').innerHTML=pagoBody(r);pagoBind(r)}if(CV.includes(k))cvBind(r);modal.show()};
+ const open=r=>{cur=r;$('#err').textContent='';if(k=='cotizaciones'||k=='facturacion'){$('#fb').innerHTML=cotBody(r,k);['input','change'].forEach(ev=>$('#fb').addEventListener(ev,cotCalc));if(k=='facturacion')$('#fb').querySelector('[name=orden]').addEventListener('change',facCarga);cotCalc()}else $('#fb').innerHTML=campos(r)+(k=='recepcion'?fotosHTML():'');if(k=='pagos'){$('#fb').innerHTML=pagoBody(r);pagoBind(r)}if(CV.includes(k))cvBind(r);nuevas=[];if(k=='recepcion')fotosBind(r);modal.show()};
  window.__redraw=draw;draw();$('#q').oninput=draw;if($('#fv'))$('#fv').onchange=draw;
  if(!noNew)$('#nw').onclick=()=>open(null);
  $('#tb').onclick=e=>{const b=e.target.closest('button');if(!b)return;
@@ -276,7 +298,7 @@ function crud(k){
   if(k=='usuarios'){if(r.id==u.id)return alert('No puedes eliminar tu propio usuario.');const er=chkUsuarios(rest,r);if(er)return alert(er)}
   if(k=='facturacion'&&pagado(r.id))return alert('Esta factura tiene pagos registrados. Elimina primero sus pagos.');
   if(!confirm('¿Eliminar este registro?'))return;put(k,rest);log('Eliminó registro',k);draw()};
- $('#f').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));let l=get(k);
+ $('#f').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));delete d.ff;let l=get(k);
   if(k=='cotizaciones'||k=='facturacion'){if(k=='facturacion'&&l.some(x=>x.numero==d.numero&&(!cur||x.id!=cur.id)))return $('#err').textContent='Ese número de factura ya existe.';const c=cotCalc();if(!c.items.length)return $('#err').textContent='Selecciona al menos un servicio o repuesto.';if(k=='cotizaciones'&&d.estado=='Aprobada'&&!(cur&&cur.stockDesc)){const er=chkStock(c.items);if(er)return $('#err').textContent=er}Object.assign(d,{items:c.items,subtotal:c.sub,itbis:c.itbis,total:c.total,descripcion:c.items.map(x=>x.d+(x.c>1?' x'+x.c:'')).join(', ')})}
   if(k=='usuarios'&&!d.clave)delete d.clave;
   if(k=='diagnostico'){const o=get('ordenes').find(x=>x.id==d.orden);if(o)d.vehiculo=o.vehiculo}
@@ -292,7 +314,7 @@ function crud(k){
   if(k=='usuarios'){if(nl.filter(x=>x.usuario==reg.usuario).length>1)return $('#err').textContent='Ese nombre de usuario ya existe.';
    const er=chkUsuarios(nl,reg);if(er)return $('#err').textContent=er}
   
-  put(k,nl);log(cur?'Editó registro':'Creó registro',k);const msg=despues(k,reg,cur);modal.hide();draw();if(msg)alert(msg)}}
+  const pr=put(k,nl);log(cur?'Editó registro':'Creó registro',k);const msg=despues(k,reg,cur);if(k=='recepcion'&&nuevas.length){const fs=nuevas;nuevas=[];pr.then(ok=>ok&&subirFotos(reg.id,fs))}modal.hide();draw();if(msg)alert(msg)}}
 
 (async()=>{
  if(pg=='login')return login();
