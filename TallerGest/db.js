@@ -1,0 +1,111 @@
+/* TallerGest – capa de base de datos (Postgres / Neon). Una tabla por módulo. */
+const { Pool, types } = require('pg');
+types.setTypeParser(1700, v => (v === null ? null : parseFloat(v)));      // NUMERIC -> number
+types.setTypeParser(20, v => (v === null ? null : parseInt(v, 10)));       // BIGINT -> number
+types.setTypeParser(1082, v => v);                                         // DATE -> 'YYYY-MM-DD'
+types.setTypeParser(1184, v => (v === null ? null : new Date(v).toISOString())); // TIMESTAMPTZ -> ISO
+
+const URL_BD = process.env.DATABASE_URL;
+if (!URL_BD) { console.error('Falta la variable DATABASE_URL (cadena de conexión de Neon).'); process.exit(1); }
+const local = /localhost|127\.0\.0\.1/.test(URL_BD);
+const pool = new Pool({ connectionString: URL_BD, ssl: local ? false : { rejectUnauthorized: true }, max: 5, idleTimeoutMillis: 30000, connectionTimeoutMillis: 20000 });
+pool.on('error', e => console.error('Conexión inactiva cerrada por la BD (se reabre sola):', e.message));
+
+/* Tipos: t=texto, n=número decimal, i=entero, d=fecha, ts=fecha y hora, b=booleano, j=JSON */
+const SQL_T = { t: 'TEXT', n: 'NUMERIC', i: 'INTEGER', d: 'DATE', ts: 'TIMESTAMPTZ', b: 'BOOLEAN', j: 'JSONB' };
+const snake = k => k.replace(/[A-Z]/g, m => '_' + m.toLowerCase());
+const AUD = [['por', 't'], ['porNombre', 't'], ['creado', 'ts']]; // quién y cuándo lo creó (lo llena la app)
+
+/* tabla -> columnas [clave, tipo, referencia?]. El orden respeta las dependencias (padres primero). */
+const SCHEMA = {
+  usuarios: { cols: [['usuario', 't'], ['nombre', 't'], ['rol', 't'], ['estado', 't'], ['hash', 't']] },
+  clientes: { cols: [['nombre', 't'], ['telefono', 't'], ['correo', 't'], ['direccion', 't'], ...AUD] },
+  vehiculos: { cols: [['placa', 't'], ['marca', 't'], ['modelo', 't'], ['anio', 'i'], ['cliente', 't', 'clientes'], ...AUD] },
+  ordenes: { cols: [['codigo', 't'], ['cliente', 't', 'clientes'], ['vehiculo', 't', 'vehiculos'], ['estado', 't'], ['fecha', 'd'], ['motivo', 't'], ...AUD] },
+  historial: { cols: [['vehiculo', 't', 'vehiculos'], ['cliente', 't', 'clientes'], ['orden', 't', 'ordenes'], ['fecha', 'd'], ['servicio', 't'], ['km', 'i'], ['tecnico', 't'], ...AUD] },
+  recepcion: { cols: [['cliente', 't', 'clientes'], ['vehiculo', 't', 'vehiculos'], ['orden', 't', 'ordenes'], ['fecha', 'd'], ['km', 'i'], ['obs', 't'], ...AUD] },
+  diagnostico: { cols: [['orden', 't', 'ordenes'], ['vehiculo', 't', 'vehiculos'], ['resultado', 't'], ['hallazgos', 't'], ...AUD] },
+  mecanicos: { cols: [['orden', 't', 'ordenes'], ['mecanico', 't', 'usuarios'], ['fecha', 'd'], ...AUD] },
+  servicios: { cols: [['descripcion', 't'], ['categoria', 't'], ['precio', 'n'], ...AUD] },
+  repuestos: { cols: [['codigo', 't'], ['descripcion', 't'], ['stock', 'i'], ['precio', 'n'], ...AUD] },
+  cotizaciones: { cols: [['orden', 't', 'ordenes'], ['descripcion', 't'], ['items', 'j'], ['subtotal', 'n'], ['itbis', 'n'], ['total', 'n'], ['estado', 't'], ['stockDesc', 'b'], ...AUD] },
+  aprobacion: { cols: [['cotizacion', 't', 'cotizaciones'], ['decision', 't'], ['fecha', 'd'], ['comentario', 't'], ...AUD] },
+  ejecucion: { cols: [['orden', 't', 'ordenes'], ['etapa', 't'], ['notas', 't'], ...AUD] },
+  facturacion: { cols: [['numero', 't'], ['orden', 't', 'ordenes'], ['descripcion', 't'], ['items', 'j'], ['subtotal', 'n'], ['itbis', 'n'], ['total', 'n'], ['fecha', 'd'], ...AUD] },
+  pagos: { cols: [['factura', 't', 'facturacion'], ['monto', 'n'], ['metodo', 't'], ['fecha', 'd'], ['detalle', 't'], ['recibido', 'n'], ['devuelta', 'n'], ['marca', 't'], ['ultimos4', 't'], ['autorizacion', 't'], ['cuotas', 't'], ['banco', 't'], ['referencia', 't'], ['ncheque', 't'], ['notas', 't'], ...AUD] },
+  auditoria: { cols: [['fecha', 't'], ['usuario', 't'], ['nombre', 't'], ['accion', 't'], ['modulo', 't'], ['creado', 'ts']] },
+  notif: { cols: [['para', 't', 'usuarios', 'CASCADE'], ['texto', 't'], ['fecha', 't'], ['leida', 'b']] },
+  cierres: { cols: [['por', 't'], ['nombre', 't'], ['desde', 'ts'], ['hasta', 'ts'], ['pagos', 'i'], ['total', 'n'], ['metodos', 'j']] },
+  cfg: { cols: [['nombre', 't'], ['rnc', 't'], ['telefono', 't'], ['correo', 't'], ['direccion', 't'], ['pie', 't'], ['logo', 't']] }
+};
+const COLS = Object.keys(SCHEMA);
+for (const t of COLS) {
+  const s = SCHEMA[t]; s.map = {};
+  s.cols.forEach(([k, ty]) => { s.map[k] = { sql: snake(k), ty }; });
+}
+
+function ddl() {
+  const out = ["CREATE SEQUENCE IF NOT EXISTS tg_seq START 1000"];
+  for (const t of COLS) {
+    const cols = SCHEMA[t].cols.map(([k, ty, ref, del]) => {
+      let d = `${snake(k)} ${SQL_T[ty]}`;
+      if (k === 'creado') d += ' DEFAULT now()';
+      if (ref) d += ` REFERENCES ${ref}(id) ON DELETE ${del || 'RESTRICT'}`;
+      return d;
+    });
+    out.push(`CREATE TABLE IF NOT EXISTS ${t}(
+  id TEXT PRIMARY KEY DEFAULT nextval('tg_seq')::text,
+  seq BIGINT GENERATED ALWAYS AS IDENTITY,
+  ${cols.join(',\n  ')},
+  extra JSONB NOT NULL DEFAULT '{}'
+)`);
+  }
+  out.push('CREATE UNIQUE INDEX IF NOT EXISTS usuarios_usuario_uq ON usuarios (lower(usuario))');
+  out.push(`CREATE TABLE IF NOT EXISTS recepcion_fotos(
+  id TEXT PRIMARY KEY DEFAULT nextval('tg_seq')::text,
+  recepcion TEXT NOT NULL REFERENCES recepcion(id) ON DELETE CASCADE,
+  nombre TEXT, tipo TEXT NOT NULL, datos BYTEA NOT NULL,
+  por TEXT, creado TIMESTAMPTZ NOT NULL DEFAULT now()
+)`);
+  out.push('CREATE INDEX IF NOT EXISTS recepcion_fotos_rec ON recepcion_fotos(recepcion)');
+  return out;
+}
+async function init() { for (const q of ddl()) await pool.query(q); }
+
+/* fila de la BD -> objeto JSON como lo espera el frontend (sin nulos) */
+function aObjeto(t, row) {
+  const o = { id: row.id };
+  for (const [k, { sql }] of Object.entries(SCHEMA[t].map)) if (row[sql] !== null && row[sql] !== undefined) o[k] = row[sql];
+  Object.assign(o, row.extra || {});
+  return o;
+}
+function valor(ty, v, k) {
+  if (v === undefined || v === null || v === '') return null;
+  if (ty === 'n' || ty === 'i') { const n = Number(v); if (!Number.isFinite(n)) throw new Error(`El campo «${k}» debe ser un número.`); return ty === 'i' ? Math.round(n) : n; }
+  if (ty === 'b') return v === true || v === 'true';
+  if (ty === 'j') return JSON.stringify(v);
+  return String(v);
+}
+/* objeto del frontend -> [columnas, valores]; lo que no es columna va a extra */
+function aFila(t, rec) {
+  const { map } = SCHEMA[t], cols = ['id'], vals = [String(rec.id)], extra = {};
+  for (const [k, v] of Object.entries(rec)) {
+    if (k === 'id') continue;
+    if (map[k]) { cols.push(map[k].sql); vals.push(valor(map[k].ty, v, k)); }
+    else extra[k] = v;
+  }
+  cols.push('extra'); vals.push(JSON.stringify(extra));
+  return [cols, vals];
+}
+async function guardar(c, t, rec) {
+  const [cols, vals] = aFila(t, rec);
+  const ph = cols.map((_, i) => '$' + (i + 1)).join(',');
+  const upd = cols.filter(x => x !== 'id').map(x => `${x}=EXCLUDED.${x}`).join(',');
+  // Una columna 'creado' vacía no debe pisar la fecha por defecto al insertar
+  await c.query(`INSERT INTO ${t}(${cols.join(',')}) VALUES(${ph}) ON CONFLICT(id) DO UPDATE SET ${upd}`, vals);
+}
+const traducir = e => e.code === '23503' ? 'No se puede completar: hay registros relacionados (por ejemplo, un cliente con vehículos o una orden con documentos). Elimina primero los dependientes.'
+  : e.code === '23505' ? 'Ya existe un registro con ese valor único (usuario o id repetido).'
+  : e.code === '22007' || e.code === '22008' ? 'Fecha no válida.' : e.message;
+
+module.exports = { pool, SCHEMA, COLS, init, aObjeto, aFila, guardar, traducir, ddl };
