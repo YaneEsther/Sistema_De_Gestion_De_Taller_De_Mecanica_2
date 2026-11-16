@@ -40,9 +40,10 @@ ejecucion:{t:'Ejecución del trabajo',i:'play-circle',r:[A,ME],f:[['orden','Orde
 facturacion:{t:'Facturación',i:'receipt',r:[A,F],f:[['numero','N° de factura'],['orden','Orden de trabajo','ref','ordenes'],['total','Total (RD$)','number'],['fecha','Fecha','date']]},
 pagos:{t:'Pagos',i:'credit-card',r:[A,F],f:[['factura','Factura','ref','facturacion'],['monto','Monto (RD$)','number'],['metodo','Método de pago','select',METODOS],['fecha','Fecha','date'],['detalle','Detalle']]},
 usuarios:{t:'Usuarios y roles',i:'person-badge',r:[A],f:[['usuario','Usuario'],['nombre','Nombre completo'],['clave','Contraseña','password'],['rol','Rol','select',Object.keys(ROLES)],['estado','Estado','select',['Activo','Inactivo']]]},
-auditoria:{t:'Auditoría',i:'shield-check',r:[A],ro:1,f:[['fecha','Fecha y hora'],['nombre','Usuario'],['accion','Acción'],['modulo','Módulo']]},
+auditoria:{t:'Auditoría',i:'shield-check',r:[A],ro:1,f:[['fecha','Fecha y hora'],['nombre','Usuario'],['accion','Acción'],['modulo','Módulo'],['registro','Registro'],['detalle','Detalle del cambio']]},
 reportes:{t:'Reportes',i:'bar-chart',r:[A,F],custom:1},
-configuracion:{t:'Configuración',i:'sliders',r:[A],custom:1}
+configuracion:{t:'Configuración',i:'sliders',r:[A],custom:1},
+ayuda:{t:'Centro de ayuda',i:'question-circle',r:[A,R,ME,F],custom:1}
 };
 const first=k=>M[k].f[0][0];
 const nm=(k,id)=>{const r=get(k).find(x=>x.id==id);return r?(k=='usuarios'?r.nombre:r[first(k)]):'—'};
@@ -53,7 +54,15 @@ const vis=(k,rows)=>u&&u.rol==ME?(k=='ordenes'?rows.filter(o=>mine().includes(St
 const BC={Pagada:'success',Finalizada:'success',Facturada:'success',Aprobada:'success',Activo:'success','Sin anomalías':'success',Parcial:'warning',Pendiente:'warning',Recibida:'secondary',Diagnosticada:'info',Cotizada:'info','En ejecución':'primary',Rechazada:'danger',Inactivo:'danger','Con fallas':'danger'};
 const bdg=v=>`<span class="badge text-bg-${BC[v]||'secondary'}">${esc(v)}</span>`;
 
-function log(accion,modulo){const l=get('auditoria');l.unshift({id:Date.now()+Math.random(),fecha:new Date().toLocaleString('es-DO'),usuario:u?u.usuario:'—',nombre:u?u.nombre:'—',accion,modulo});put('auditoria',l.slice(0,300))}
+/* Auditoría detallada: qué se creó, qué datos cambiaron y por cuáles */
+const nrm=s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+const LOGX={facturacion:[['descripcion','Detalle']]};
+const camposLog=k=>[...M[k].f.filter(f=>f[2]!='password'),...(LOGX[k]||[])];
+function vlog(f,r){const v=r[f[0]];if(v===undefined||v===null||v==='')return '(vacío)';if(f[2]=='ref')return nm(f[3],v);if(f[0]=='rol')return ROLES[v]||v;if(['total','monto','precio'].includes(f[0])&&!isNaN(v))return 'RD$ '+fmt(v);return String(v)}
+function dif(k,a,b){const o=[];for(const f of camposLog(k)){const x=vlog(f,a),y=vlog(f,b);if(x!==y)o.push(`${f[1]}: «${x}» → «${y}»`)}if(k=='usuarios'&&b.clave)o.push('Contraseña: cambiada');return o.join('\n')}
+function resumen(k,r){const o=[];for(const f of camposLog(k)){const v=vlog(f,r);if(v!=='(vacío)')o.push(`${f[1]}: ${v}`)}return o.join('\n')}
+const regLbl=(k,r)=>{if(k=='repuestos')return `${r.codigo||''} · ${r.descripcion||''}`;const f=M[k].f[0],v=f[2]=='ref'?nm(f[3],r[f[0]]):r[f[0]];return String(v??'—')};
+function log(accion,modulo,registro,detalle){const l=get('auditoria');l.unshift({id:Date.now()+Math.random(),fecha:new Date().toLocaleString('es-DO'),usuario:u?u.usuario:'—',nombre:u?u.nombre:'—',accion,modulo,registro:registro||'',detalle:String(detalle||'').slice(0,900)});put('auditoria',l.slice(0,300))}
 
 /* Reglas del módulo de usuarios: siempre debe quedar un administrador activo */
 function chkUsuarios(lista,reg){
@@ -75,15 +84,21 @@ function shell(){
  <div class="flex-grow-1 min-vw-0"><header class="topbar d-flex align-items-center gap-2 px-3 py-2 bg-white shadow-sm"><button class="btn d-md-none" data-bs-toggle="offcanvas" data-bs-target="#sb"><i class="bi bi-list fs-4"></i></button><div class="ms-auto"></div>${1?'<div class="dropdown"><button class="btn btn-sm position-relative" id="bell" data-bs-toggle="dropdown"><i class="bi bi-bell fs-5"></i><span id="bn" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none"></span></button><ul class="dropdown-menu dropdown-menu-end p-0" id="bl" style="width:300px"></ul></div>':''}<span class="small text-muted">${esc(u.nombre)} · ${ROLES[u.rol]}</span><button class="btn btn-sm btn-outline-primary" id="out">Salir</button></header><main class="p-3 p-md-4" id="main"></main></div></div>`;
  $('#out').onclick=()=>{log('Cierre de sesión','Login');sessionStorage.removeItem('tg_ses');location='index.html'};
  {bell();$('#bell').addEventListener('click',()=>setTimeout(()=>{put('notif',get('notif').map(x=>x.para==u.id?{...x,leida:true}:x));$('#bn').classList.add('d-none')},50));addEventListener('storage',bell)}
- pg=='dashboard'?dash():pg=='reportes'?rep():pg=='configuracion'?cfg():crud(pg)}
+ pg=='dashboard'?dash():pg=='reportes'?rep():pg=='configuracion'?cfg():pg=='ayuda'?ayuda():crud(pg)}
 
 function bell(){
  const n=get('notif').filter(x=>x.para==u.id),nu=n.filter(x=>!x.leida).length;
  $('#bn').textContent=nu;$('#bn').classList.toggle('d-none',!nu);
  $('#bl').innerHTML=n.length?n.slice(0,8).map(x=>`<li class="dropdown-item-text small border-bottom ${x.leida?'text-muted':'fw-semibold'}">${esc(x.texto)}<div class="text-muted fw-normal">${esc(x.fecha)}</div></li>`).join(''):'<li class="dropdown-item-text small text-muted">Sin notificaciones</li>'}
 function dash(){window.__redraw=dash;
+ const bajos=u.rol==A||u.rol==ME?get('repuestos').filter(r=>r.stock!==undefined&&r.stock!==''&&Number(r.stock)<=5):[],
+  ord=M.ordenes.r.includes(u.rol)?vis('ordenes',get('ordenes')):[],cnt=ESTADOS.map(e=>[e,ord.filter(o=>o.estado==e).length]).filter(x=>x[1]),
+  pend=u.rol==A||u.rol==F?get('facturacion').filter(f=>pagado(f.id)+0.001<Number(f.total)):[],
+  ext=(bajos.length?`<div class="alert alert-warning mt-4 mb-2"><b><i class="bi bi-exclamation-triangle"></i> Stock bajo (${bajos.length}):</b> ${bajos.map(r=>esc(r.descripcion)+' ('+r.stock+')').join(', ')}. <a href="repuestos.html">Ver repuestos</a></div>`:'')
+   +(pend.length?`<div class="alert alert-info mt-3 mb-2"><b><i class="bi bi-receipt"></i> Facturas pendientes de cobro:</b> ${pend.length} · Saldo total RD$ ${fmt(pend.reduce((a,f)=>a+Math.max(0,Number(f.total)-pagado(f.id)),0))}. <a href="pagos.html">Registrar pagos</a></div>`:'')
+   +(cnt.length?`<h6 class="mt-4">${u.rol==ME?'Mis órdenes por estado':'Órdenes por estado'}</h6><div class="d-flex flex-wrap gap-3">${cnt.map(([e,n])=>`<span>${bdg(e)} <b>${n}</b></span>`).join('')}</div>`:'');
  const ks=['clientes','vehiculos','ordenes','cotizaciones','servicios','repuestos'].filter(k=>M[k].r.includes(u.rol));
- $('#main').innerHTML=`<h4>Hola, ${esc(u.nombre)}</h4><p class="text-muted">Bienvenido al sistema TallerGest</p><div class="row g-3">${ks.map(k=>`<div class="col-6 col-lg-4"><a href="${k}.html" class="text-decoration-none text-reset"><div class="card stat p-3 d-flex flex-row align-items-center gap-3"><i class="bi bi-${M[k].i}"></i><div><div class="text-muted small">${u.rol==ME&&k=='ordenes'?'Mis órdenes asignadas':M[k].t}</div><div class="n">${vis(k,get(k)).length}</div></div></div></a></div>`).join('')}</div>`}
+ $('#main').innerHTML=`<h4>Hola, ${esc(u.nombre)}</h4><p class="text-muted">Bienvenido al sistema TallerGest. ¿Dudas? Visita el <a href="ayuda.html">Centro de ayuda</a>.</p><div class="row g-3">${ks.map(k=>`<div class="col-6 col-lg-4"><a href="${k}.html" class="text-decoration-none text-reset"><div class="card stat p-3 d-flex flex-row align-items-center gap-3"><i class="bi bi-${M[k].i}"></i><div><div class="text-muted small">${u.rol==ME&&k=='ordenes'?'Mis órdenes asignadas':M[k].t}</div><div class="n">${vis(k,get(k)).length}</div></div></div></a></div>`).join('')}</div>${ext}`}
 
 function rep(){
  const adm=u.rol==A;let modo=adm?'hist':'turno';
@@ -120,14 +135,63 @@ function rep(){
    const c=get('cierres');c.push({id:Date.now(),por:u.id,nombre:u.nombre,desde:ini(),hasta:new Date().toISOString(),pagos:pg.length,total:suma(pg,'monto'),metodos:Object.fromEntries(METODOS.map(m=>[m,suma(pg.filter(x=>x.metodo==m),'monto')]))});
    put('cierres',c);log('Cierre de caja','reportes');pinta()}};
  pinta()}
+/* Centro de ayuda: el contenido cambia según el rol del usuario */
+const FLUJO=[['Recepción','recepcion',[R]],['Asignar mecánico','mecanicos',[R]],['Diagnóstico','diagnostico',[ME]],['Cotización','cotizaciones',[F,R]],['Aprobación del cliente','aprobacion',[R]],['Ejecución','ejecucion',[ME]],['Facturación','facturacion',[F]],['Pago','pagos',[F]]];
+const HELP={
+admin:{r:'Tienes acceso a todos los módulos. Tu trabajo principal es supervisar el taller, administrar usuarios y revisar la auditoría.',
+ t:[['Crear o editar usuarios',['Entra a «Usuarios y roles» y pulsa «Nuevo».','Escribe usuario, nombre completo y contraseña, y elige el rol (Administrador, Recepcionista, Mecánico o Facturador).','Para dejar sin acceso a alguien sin borrarlo, edítalo y cambia su estado a «Inactivo».','Para cambiar una contraseña, edita el usuario y escribe la nueva; si dejas el campo vacío no cambia.']],
+ ['Revisar la auditoría',['Entra a «Auditoría».','Filtra por módulo o por usuario, o usa el buscador.','Cada fila indica quién hizo el cambio, sobre qué registro y qué datos cambiaron (valor anterior → valor nuevo). Si se creó un registro, muestra los datos que se agregaron.']],
+ ['Configurar los datos del taller',['En «Configuración» completa nombre, RNC, teléfono, correo, dirección, pie de página y logo.','Estos datos aparecen en las cotizaciones, facturas y reportes impresos.']],
+ ['Corregir el estado de una orden',['El estado cambia solo, según avanza el trabajo.','Si hubo un error, solo el administrador puede editar la orden y cambiar su estado manualmente.']],
+ ['Consultar reportes y cierres de caja',['En «Reportes» filtra por fechas, cajero y método de pago.','Puedes exportar a Excel o imprimir en PDF.','Al final se listan los cierres de caja realizados.']]],
+ q:[['¿Puedo eliminar o desactivar al único administrador?','No. Siempre debe quedar al menos un administrador activo.'],['¿Dónde veo las copias de seguridad de la base de datos?','La base de datos está en Neon, que conserva el historial de cambios y permite restaurar desde su propio panel.']]},
+recepcion:{r:'Recibes al cliente y a su vehículo, abres la orden de trabajo y das seguimiento hasta la entrega.',
+ t:[['Registrar un cliente y su vehículo',['Entra a «Registro de clientes» → «Nuevo» y completa nombre, teléfono, correo y dirección.','Luego entra a «Registro de vehículos» → «Nuevo»: placa o VIN, marca, modelo, año y el cliente dueño.','La placa no se puede repetir.']],
+ ['Recibir un vehículo (con fotos)',['Entra a «Recepción del vehículo» → «Nuevo».','Selecciona el cliente y el vehículo, la fecha y el kilometraje, y anota las observaciones (golpes, rayones, objetos dejados en el vehículo).','Adjunta las fotos del vehículo (hasta 12). Son la evidencia de cómo lo entregó el cliente.','Al guardar, se crea automáticamente la orden de trabajo (OT-001, OT-002...).']],
+ ['Asignar un mecánico',['Entra a «Asignación de mecánicos» → «Nuevo».','Elige la orden (solo aparecen las «Recibidas») y el mecánico activo.','El mecánico recibe una notificación.']],
+ ['Registrar la respuesta del cliente a una cotización',['Cuando te llegue el aviso de una nueva cotización, comunícate con el cliente.','En «Aprobación del cliente» elige la cotización pendiente y marca «Aprobada» o «Rechazada».','Si se aprueba, se descuenta el stock de repuestos y se avisa a facturación y al mecánico.']],
+ ['Imprimir una cotización',['En «Cotizaciones» pulsa el ícono de la impresora de la fila correspondiente.']],
+ ['Consultar el historial de un vehículo',['Entra a «Historial de mantenimiento» y filtra por vehículo para ver los servicios anteriores.']]],
+ q:[['No me aparece una orden al asignar mecánico','Solo se pueden asignar órdenes en estado «Recibida».'],['Subí una foto por error','Abre la recepción con el lápiz y pulsa la × sobre la foto para eliminarla.'],['¿Puedo cambiar el estado de una orden?','No. Cambia solo con el avance del trabajo. Si hay un error, pídeselo al administrador.']]},
+mecanico:{r:'Solo ves las órdenes que te asignaron. Tu trabajo es diagnosticar, registrar el avance y finalizar los trabajos.',
+ t:[['Ver mis órdenes',['Entra a «Órdenes de trabajo»: solo aparecen las que te asignaron.','Cuando te asignan una orden nueva recibes una notificación en la campana.']],
+ ['Registrar un diagnóstico',['Entra a «Diagnóstico» → «Nuevo» y elige la orden (estado «Recibida»).','Selecciona el resultado y describe los hallazgos.','La orden pasa a «Diagnosticada» y se avisa a recepción para preparar la cotización.']],
+ ['Registrar el avance del trabajo',['Espera el aviso de que el cliente aprobó la cotización.','En «Ejecución del trabajo» crea un registro con la etapa y tus notas.','Con la etapa «Ejecución», la orden pasa a «En ejecución».','Con la etapa «Finalización», la orden pasa a «Finalizada», se guarda en el historial del vehículo y se avisa a facturación.']],
+ ['Consultar repuestos',['«Gestión de repuestos» muestra el stock disponible; aparece «Bajo» cuando quedan 5 o menos.','Para registrar un repuesto nuevo, pulsa «Nuevo»: el código se genera solo.']],
+ ['Consultar el historial de un vehículo',['Entra a «Historial de mantenimiento» y filtra por vehículo.']]],
+ q:[['No veo una orden que debería tener','Solo ves las órdenes asignadas a ti. Pide a recepción que te la asigne.'],['¿Cuándo se descuenta el stock?','Al aprobarse la cotización, no al terminar el trabajo.'],['Al registrar un repuesto dice que ya existe','El sistema compara la descripción sin importar mayúsculas, tildes ni espacios. Edita el repuesto existente para ajustar su stock.']]},
+facturador:{r:'Preparas cotizaciones, facturas y cobros, y haces el cierre de caja de tu turno.',
+ t:[['Crear una cotización',['Entra a «Cotizaciones» → «Nuevo» y elige la orden.','Marca los servicios y repuestos con su cantidad: el ITBIS (18%) y el total se calculan solos.','Se avisa a recepción para que la apruebe con el cliente.']],
+ ['Generar una factura',['Entra a «Facturación» → «Nuevo» y elige la orden. Si tiene una cotización aprobada, los ítems se cargan solos y puedes ajustarlos.','Escribe el número de factura (no se puede repetir) y guarda.','Pulsa el ícono de la impresora para imprimirla.']],
+ ['Registrar un pago',['Entra a «Pagos» → «Nuevo» y elige la factura.','Selecciona el método (efectivo, tarjeta, transferencia o cheque) y completa los datos que pide. En efectivo se calcula la devuelta.','Se permiten pagos parciales, pero no cobrar más que el saldo.','Cuando se cubre el total, la orden pasa a «Pagada».']],
+ ['Hacer el cierre de caja',['Entra a «Reportes». Verás el cierre de tu turno.','Revisa lo cobrado por método de pago y, si quieres, imprímelo.','Pulsa «Realizar cierre de caja». Solo incluye lo que registraste tú en el turno.']]],
+ q:[['No me deja eliminar una factura','Tiene pagos registrados. Elimina primero sus pagos.'],['Dice que el monto supera el saldo','Revisa lo que ya se pagó: el sistema no permite cobrar de más.'],['¿Dónde veo cuánto me deben?','En «Facturación», en las columnas Pagado, Saldo y Estado. El inicio también muestra las facturas pendientes de cobro.']]}
+};
+const HELP_COMUN=[['¿Qué es la campana de arriba?','Muestra tus notificaciones: avisos cuando otra área termina un paso que te corresponde. Se marcan como leídas al abrirla.'],['¿Cómo cambio mi contraseña?','Pídele al administrador que la cambie desde «Usuarios y roles».'],['¿Por qué no me deja eliminar un registro?','Si tiene otros registros relacionados (por ejemplo, un cliente con vehículos), primero hay que eliminar esos registros.'],['¿Dónde queda constancia de lo que hago?','Cada alta, cambio o eliminación queda guardada en la auditoría, con tu nombre, la fecha y los datos que cambiaron.'],['La pantalla no muestra lo último que se registró','Los datos se actualizan solos cada pocos segundos. Si no ocurre, recarga la página.']];
+const EST_AYUDA=[['Recibida','El vehículo ingresó y se abrió la orden.'],['Diagnosticada','El mecánico terminó el diagnóstico.'],['Cotizada','Hay una cotización esperando la respuesta del cliente.'],['Aprobada','El cliente aprobó: ya se puede trabajar y facturar.'],['En ejecución','El mecánico está realizando el trabajo.'],['Finalizada','El trabajo terminó y el vehículo está listo para entregar.'],['Facturada','Se emitió la factura; falta el cobro.'],['Pagada','La factura fue pagada por completo.']];
+function ayuda(){
+ let rol=u.rol,busq='';
+ const item=(t,c,ab)=>`<details class="border rounded bg-white mb-2 px-3 py-2" ${ab?'open':''}><summary class="fw-semibold">${esc(t)}</summary><div class="pt-2">${c}</div></details>`;
+ const lista=()=>{const h=HELP[rol],f=x=>!busq||nrm(x).includes(busq),ts=h.t.filter(x=>f(x[0]+' '+x[1].join(' '))),fq=[...h.q,...HELP_COMUN].filter(x=>f(x[0]+' '+x[1]));
+  $('#hl').innerHTML=(ts.length?'<h6 class="mt-3">¿Cómo hago...?</h6>'+ts.map(x=>item(x[0],`<ol class="mb-0">${x[1].map(p=>`<li>${esc(p)}</li>`).join('')}</ol>`,busq)).join(''):'')
+   +(fq.length?'<h6 class="mt-4">Preguntas frecuentes</h6>'+fq.map(x=>item(x[0],`<p class="mb-0">${esc(x[1])}</p>`,busq)).join(''):'')
+   +(!ts.length&&!fq.length?'<p class="text-muted mt-3">No se encontró nada con esa búsqueda.</p>':'')};
+ const pinta=()=>{const h=HELP[rol];
+  $('#main').innerHTML=`<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3"><h4 class="mb-0"><i class="bi bi-question-circle"></i> Centro de ayuda</h4>${u.rol==A?`<div class="d-flex align-items-center gap-2"><label class="small text-muted mb-0" for="hr">Ver la ayuda de:</label><select id="hr" class="form-select form-select-sm w-auto">${Object.entries(ROLES).map(([k,v])=>`<option value="${k}" ${k==rol?'selected':''}>${v}</option>`).join('')}</select></div>`:''}</div>
+  <div class="card p-3 mb-3"><div class="fw-semibold">${ROLES[rol]}</div><div class="text-muted">${esc(h.r)}</div></div>
+  <h6>Recorrido de una orden de trabajo</h6><div class="d-flex flex-wrap gap-2 mb-1">${FLUJO.map((s,i)=>{const mio=rol==A||s[2].includes(rol);return `<span class="badge ${mio?'text-bg-primary':'text-bg-light border text-muted'} fw-normal py-2">${i+1}. ${s[0]}</span>`}).join('')}</div>
+  <div class="small text-muted mb-3">Los pasos resaltados son los que te corresponden${rol==A?' (como administrador puedes intervenir en todos)':''}.</div>
+  <h6>Módulos de este rol</h6><div class="d-flex flex-wrap gap-2 mb-3">${Object.entries(M).filter(([k,m])=>k!='ayuda'&&m.r.includes(rol)).map(([k,m])=>`<a class="btn btn-sm btn-outline-primary" href="${k}.html"><i class="bi bi-${m.i}"></i> ${m.t}</a>`).join('')}</div>
+  <input id="hq" class="form-control" placeholder="Buscar en la ayuda (por ejemplo: factura, foto, cierre)..." value="${esc(busq)}"><div id="hl"></div>
+  <h6 class="mt-4">Estados de una orden</h6><div class="card"><table class="table table-sm mb-0"><tbody>${EST_AYUDA.map(x=>`<tr><td style="width:150px">${bdg(x[0])}</td><td>${x[1]}</td></tr>`).join('')}</tbody></table></div>`;
+  lista();$('#hq').oninput=e=>{busq=nrm(e.target.value);lista()};if($('#hr'))$('#hr').onchange=e=>{rol=e.target.value;busq='';pinta()}};
+ pinta()}
 function cfg(){
  const c=get('cfg',{});let logoData=c.logo||'';
  const campo=(k,l,t='text')=>`<div class="col-md-6"><label class="form-label">${l}</label><input class="form-control" name="${k}" type="${t}" value="${esc(c[k])}"></div>`;
- $('#main').innerHTML=`<h4 class="mb-3">Configuración del taller</h4><div class="card p-3" style="max-width:760px"><form id="f"><div class="row g-3">${campo('nombre','Nombre del taller')}${campo('rnc','RNC')}${campo('telefono','Teléfono')}${campo('correo','Correo','email')}<div class="col-12"><label class="form-label">Dirección</label><input class="form-control" name="direccion" value="${esc(c.direccion)}"></div><div class="col-12"><label class="form-label">Pie de página de los documentos</label><input class="form-control" name="pie" value="${esc(c.pie)}" placeholder="Gracias por su preferencia"></div><div class="col-12"><label class="form-label">Logo (facturas, cotizaciones y reportes)</label><div class="d-flex align-items-center gap-3"><img id="lp" src="${logoData||LOGO}" height="64" style="background:#fff;border-radius:10px;border:1px solid #ddd;padding:4px" alt=""><input type="file" id="lf" accept="image/*" class="form-control"></div></div></div><button class="btn btn-warning mt-3">Guardar</button> <span id="ok" class="text-success ms-2"></span></form></div>
- <div class="mt-3"><button class="btn btn-outline-primary" id="bk"><i class="bi bi-download"></i> Descargar respaldo de la base de datos</button></div>`;
+ $('#main').innerHTML=`<h4 class="mb-3">Configuración del taller</h4><div class="card p-3" style="max-width:760px"><form id="f"><div class="row g-3">${campo('nombre','Nombre del taller')}${campo('rnc','RNC')}${campo('telefono','Teléfono')}${campo('correo','Correo','email')}<div class="col-12"><label class="form-label">Dirección</label><input class="form-control" name="direccion" value="${esc(c.direccion)}"></div><div class="col-12"><label class="form-label">Pie de página de los documentos</label><input class="form-control" name="pie" value="${esc(c.pie)}" placeholder="Gracias por su preferencia"></div><div class="col-12"><label class="form-label">Logo (facturas, cotizaciones y reportes)</label><div class="d-flex align-items-center gap-3"><img id="lp" src="${logoData||LOGO}" height="64" style="background:#fff;border-radius:10px;border:1px solid #ddd;padding:4px" alt=""><input type="file" id="lf" accept="image/*" class="form-control"></div></div></div><button class="btn btn-warning mt-3">Guardar</button> <span id="ok" class="text-success ms-2"></span></form></div>`;
  $('#lf').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,300/im.width),cv=document.createElement('canvas');cv.width=im.width*k;cv.height=im.height*k;cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);logoData=cv.toDataURL('image/png');$('#lp').src=logoData};im.src=r.result};r.readAsDataURL(f)};
- $('#f').onsubmit=e=>{e.preventDefault();put('cfg',{...Object.fromEntries(new FormData(e.target)),logo:logoData});log('Configuración actualizada','configuracion');$('#ok').textContent='Guardado'};
- $('#bk').onclick=async()=>{const r=await fetch('/api/respaldo',{headers:{Authorization:'Bearer '+tk()}});if(!r.ok)return alert('No se pudo generar el respaldo.');const b=await r.blob(),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='tallergest-respaldo-'+hoy()+'.json';a.click()}}
+ $('#f').onsubmit=e=>{e.preventDefault();put('cfg',{...Object.fromEntries(new FormData(e.target)),logo:logoData});log('Configuración actualizada','configuracion');$('#ok').textContent='Guardado'};}
 
 
 /* Cotizaciones: selección de servicios y repuestos con cálculo automático (ITBIS 18%) */
@@ -187,6 +251,9 @@ function cotCalc(){
  return {items,sub,itbis,total:sub+itbis}}
 
 const CV=['ordenes','recepcion','historial'];
+/* Evita duplicados sin importar mayúsculas, tildes ni espacios sobrantes */
+const nrm0=(k,v)=>k=='vehiculos'?nrm(v).replace(/[\s-]/g,''):nrm(v);
+const DUP={repuestos:['descripcion',x=>`Ya existe el repuesto «${x.descripcion}» (código ${x.codigo}). Edítalo para ajustar su stock en vez de crear otro.`],servicios:['descripcion',x=>`Ya existe el servicio «${x.descripcion}».`],vehiculos:['placa',x=>`Ya existe un vehículo con la placa «${x.placa}».`]};
 const hoy=()=>new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
 const sig=(k,c,pre)=>pre+String(Math.max(0,...get(k).map(x=>parseInt(String(x[c]).replace(/\D/g,''))||0))+1).padStart(3,'0');
 const lbl=(k,x)=>k=='ordenes'?`${x.codigo} · ${nm('clientes',x.cliente)} · ${nm('vehiculos',x.vehiculo)}`:k=='vehiculos'?`${x.placa} · ${x.marca} ${x.modelo}`:nm(k,x.id);
@@ -209,9 +276,9 @@ function histAuto(oid){
 function notif(para,texto){
  const us=get('usuarios').filter(x=>x.estado=='Activo'&&(Array.isArray(para)?para.includes(x.rol):x.id==para)&&(!u||x.id!=u.id)),n=get('notif');
  us.forEach(x=>n.unshift({id:Date.now()+Math.random(),para:x.id,texto,fecha:new Date().toLocaleString('es-DO'),leida:false}));put('notif',n.slice(0,300))}
-function avanzar(oid,e){const l=get('ordenes'),o=l.find(x=>x.id==oid);if(o&&ESTADOS.indexOf(e)>ESTADOS.indexOf(o.estado)){o.estado=e;put('ordenes',l)}}
+function avanzar(oid,e){const l=get('ordenes'),o=l.find(x=>x.id==oid);if(o&&ESTADOS.indexOf(e)>ESTADOS.indexOf(o.estado)){const ant=o.estado;o.estado=e;put('ordenes',l);log('Cambió el estado de la orden','ordenes',o.codigo,`Estado: «${ant}» → «${e}» (automático)`)}}
 function chkStock(items){for(const x of items||[]){if(x.t!='r')continue;const r=get('repuestos').find(y=>y.id==x.id);if(r&&Number(r.stock)<x.c)return `Stock insuficiente de «${x.d}»: hay ${r.stock} y se necesitan ${x.c}.`}return null}
-function descontar(cid){const l=get('cotizaciones'),c=l.find(x=>x.id==cid);if(!c||c.stockDesc)return;const rs=get('repuestos');(c.items||[]).forEach(x=>{if(x.t=='r'){const r=rs.find(y=>y.id==x.id);if(r)r.stock=Math.max(0,Number(r.stock)-x.c)}});c.stockDesc=true;put('repuestos',rs);put('cotizaciones',l)}
+function descontar(cid){const l=get('cotizaciones'),c=l.find(x=>x.id==cid);if(!c||c.stockDesc)return;const rs=get('repuestos'),ln=[];(c.items||[]).forEach(x=>{if(x.t=='r'){const r=rs.find(y=>y.id==x.id);if(r){const a=Number(r.stock);r.stock=Math.max(0,a-x.c);ln.push(`${r.descripcion}: stock ${a} → ${r.stock}`)}}});c.stockDesc=true;put('repuestos',rs);put('cotizaciones',l);if(ln.length)log('Descontó stock de repuestos','repuestos','Cotización de '+nm('ordenes',c.orden),ln.join('\n'))}
 function aprobar(cid,dec){
  const l=get('cotizaciones'),c=l.find(x=>x.id==cid);if(!c)return;c.estado=dec;put('cotizaciones',l);const ot=nm('ordenes',c.orden);
  if(dec=='Aprobada'){descontar(cid);avanzar(c.orden,'Aprobada');notif([F,A],`Cotización aprobada de ${ot}: ya se puede facturar.`);const as=get('mecanicos').find(a=>a.orden==c.orden);if(as)notif(as.mecanico,`El cliente aprobó la cotización de ${ot}: puedes iniciar el trabajo.`)}
@@ -253,18 +320,19 @@ async function subirFotos(id,fs){
  for(const f of fs){try{const d=await new Promise((ok,er)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=er;r.readAsDataURL(f.blob)});await api('POST','/api/recepcion/'+id+'/fotos',{nombre:f.nombre,tipo:'image/jpeg',datos:d})}catch(e){if(e.message!='401')alert('No se pudo subir una foto: '+e.message)}}
  await Q;await cargar().catch(()=>{});window.__redraw&&window.__redraw()}
 function crud(k){
- const m=M[k],cols=m.f.filter(f=>f[2]!='textarea').slice(0,5),noNew=m.ro||(u.rol==ME&&k=='ordenes');
+ const m=M[k],cols=m.f.filter(f=>f[2]!='textarea').slice(0,k=='auditoria'?6:5),noNew=m.ro||(u.rol==ME&&k=='ordenes');
  const ex=k=='facturacion'?[['Pagado',r=>fmt(pagado(r.id))],['Saldo',r=>fmt(Math.max(0,Number(r.total)-pagado(r.id)))],['Estado',r=>{const p=pagado(r.id);return bdg(p<=0?'Pendiente':p+0.001>=Number(r.total)?'Pagada':'Parcial')}],['',r=>`<button class="btn btn-sm btn-outline-primary" data-p="${r.id}" title="Imprimir factura"><i class="bi bi-printer"></i></button>`]]:k=='pagos'?[['',r=>`<button class="btn btn-sm btn-outline-primary" data-p="${r.factura}" title="Imprimir factura"><i class="bi bi-printer"></i></button>`]]:k=='recepcion'?[['Orden',r=>r.orden?esc(nm('ordenes',r.orden)):'—'],['Fotos',r=>r.fotos&&r.fotos.length?`<span class="badge text-bg-secondary"><i class="bi bi-camera"></i> ${r.fotos.length}</span>`:'—']]:k=='historial'?[['Orden',r=>r.orden?esc(nm('ordenes',r.orden)):'—']]:k=='cotizaciones'?[['',r=>`<button class="btn btn-sm btn-outline-primary" data-pc="${r.id}" title="Imprimir cotización"><i class="bi bi-printer"></i></button>`]]:[];
- const cell=(f,r)=>f[2]=='ref'?esc(nm(f[3],r[f[0]])):f[2]=='password'?'••••':['estado','decision','resultado'].includes(f[0])&&r[f[0]]?bdg(r[f[0]]):f[0]=='stock'&&r.stock!==undefined&&r.stock!==''?esc(r.stock)+(+r.stock<=5?' <span class="badge text-bg-danger">Bajo</span>':''):(f[0]=='total'||f[0]=='monto')&&r[f[0]]!==undefined&&r[f[0]]!==''?fmt(r[f[0]]):esc(r[f[0]]);
+ const cell=(f,r)=>k=='auditoria'&&f[0]=='detalle'?`<div class="small text-muted" style="white-space:pre-wrap;min-width:240px">${esc(r.detalle)}</div>`:k=='auditoria'&&f[0]=='modulo'?esc((M[r.modulo]||{}).t||r.modulo):k=='auditoria'&&f[0]=='accion'?`<span class="badge text-bg-${/^Cre/.test(r.accion)?'success':/^(Edit|Cambi|Descont)/.test(r.accion)?'warning':/^(Elimin|Intento|Acceso)/.test(r.accion)?'danger':'secondary'}">${esc(r.accion)}</span>`:f[2]=='ref'?esc(nm(f[3],r[f[0]])):f[2]=='password'?'••••':['estado','decision','resultado'].includes(f[0])&&r[f[0]]?bdg(r[f[0]]):f[0]=='stock'&&r.stock!==undefined&&r.stock!==''?esc(r.stock)+(+r.stock<=5?' <span class="badge text-bg-danger">Bajo</span>':''):(f[0]=='total'||f[0]=='monto')&&r[f[0]]!==undefined&&r[f[0]]!==''?fmt(r[f[0]]):esc(r[f[0]]);
  const inp=(f,v)=>{const n=`name="${f[0]}" class="form-control" `,req=f[2]=='textarea'?'':'required';
+  if(k=='repuestos'&&f[0]=='codigo')return `<input name="codigo" class="form-control" readonly value="${esc(v)||sig('repuestos','codigo','REP-')}"><div class="form-text">Se genera automáticamente.</div>`;
   if(k=='ordenes'&&f[0]=='codigo')return `<input name="codigo" class="form-control" readonly value="${v||sig('ordenes','codigo','OT-')}"><div class="form-text">Se genera automáticamente.</div>`;
   if(k=='ordenes'&&f[0]=='estado')return u.rol==A&&v?`<select name="estado" class="form-select">${ESTADOS.map(o=>`<option ${o==v?'selected':''}>${o}</option>`).join('')}</select>`:`<div>${bdg(v||'Recibida')}<input type="hidden" name="estado" value="${v||'Recibida'}"></div><div class="form-text">El estado cambia solo según avance el trabajo. Solo el administrador puede corregirlo.</div>`;
   if(f[2]=='textarea')return `<textarea ${n}rows="3">${esc(v)}</textarea>`;
   if(f[2]=='select')return `<select name="${f[0]}" class="form-select" required>${(f[0]=='estado'&&k=='ordenes'&&v&&u.rol!=A?f[3].slice(Math.max(0,f[3].indexOf(v))):f[3]).map(o=>`<option value="${o}" ${o==v?'selected':''}>${o=='admin'||ROLES[o]?ROLES[o]||o:o}</option>`).join('')}</select>`;
   if(f[2]=='ref'){const l=vis(f[3],get(f[3])).filter(x=>!f[4]||f[4](x)||x.id==v);return `<select name="${f[0]}" class="form-select" required><option value="">Seleccionar...</option>${l.map(x=>`<option value="${x.id}" ${x.id==v?'selected':''}>${esc(lbl(f[3],x))}</option>`).join('')}</select>`}
-  return `<input ${n}type="${f[2]||'text'}" ${f[2]=='number'?'step="any"':''} value="${f[2]=='password'?'':esc(v)}" ${f[2]=='password'&&cur?'placeholder="(sin cambios)"':req}>`};
+  return `<input ${n}type="${f[2]||'text'}" ${f[2]=='number'?'step="any" min="0"':''} value="${f[2]=='password'?'':esc(v)}" ${f[2]=='password'&&cur?'placeholder="(sin cambios)"':req}>`};
  $('#main').innerHTML=`<div class="d-flex justify-content-between mb-3"><h4>${m.t}</h4>${noNew?'':'<button class="btn btn-warning" id="nw"><i class="bi bi-plus-lg"></i> Nuevo</button>'}</div>
- <div class="row g-2 mb-3"><div class="col"><input id="q" class="form-control" placeholder="Buscar..."></div>${k=='historial'?`<div class="col-md-5"><select id="fv" class="form-select"><option value="">Todos los vehículos</option>${get('vehiculos').map(v=>`<option value="${v.id}">${esc(v.placa)} · ${esc(v.marca)} ${esc(v.modelo)} · ${esc(nm('clientes',v.cliente))}</option>`).join('')}</select></div>`:''}</div>
+ <div class="row g-2 mb-3"><div class="col"><input id="q" class="form-control" placeholder="Buscar..."></div>${k=='auditoria'?`<div class="col-6 col-md-3"><select id="fm" class="form-select"><option value="">Todos los módulos</option>${[...new Set(get('auditoria').map(a=>a.modulo))].filter(Boolean).map(x=>`<option value="${esc(x)}">${esc((M[x]||{}).t||x)}</option>`).join('')}</select></div><div class="col-6 col-md-3"><select id="fu" class="form-select"><option value="">Todos los usuarios</option>${[...new Set(get('auditoria').map(a=>a.nombre))].filter(Boolean).map(x=>`<option>${esc(x)}</option>`).join('')}</select></div>`:''}${k=='historial'?`<div class="col-md-5"><select id="fv" class="form-select"><option value="">Todos los vehículos</option>${get('vehiculos').map(v=>`<option value="${v.id}">${esc(v.placa)} · ${esc(v.marca)} ${esc(v.modelo)} · ${esc(nm('clientes',v.cliente))}</option>`).join('')}</select></div>`:''}</div>
  <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr>${cols.map(c=>`<th>${c[1]}</th>`).join('')}${ex.map(e=>`<th>${e[0]}</th>`).join('')}${noNew?'':'<th></th>'}</tr></thead><tbody id="tb"></tbody></table></div></div>
  <div class="modal fade" id="md" tabindex="-1"><div class="modal-dialog ${k=='cotizaciones'||k=='facturacion'||k=='pagos'?'modal-lg':''}"><form class="modal-content" id="f"><div class="modal-header"><h5 class="modal-title">${m.t}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="fb"></div><div class="modal-footer"><div id="err" class="text-danger small me-auto"></div><button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-warning">Guardar</button></div></form></div></div>`;
  const modal=new bootstrap.Modal('#md');let cur=null,nuevas=[];
@@ -281,14 +349,14 @@ function crud(k){
    if(b&&b.dataset.fd){if(!confirm('¿Eliminar esta foto?'))return;try{await api('DELETE','/api/fotos/'+b.dataset.fd);const rr=get('recepcion').find(x=>x.id==r.id);if(rr)rr.fotos=rr.fotos.filter(f=>f.id!=b.dataset.fd);pinta()}catch(x){alert(x.message)}return}
    if(im&&im.src)window.open(im.src,'_blank')};
   pinta()};
- const draw=()=>{const q=$('#q').value.toLowerCase(),fv=$('#fv')?$('#fv').value:'',rows=vis(k,get(k)).filter(r=>(!fv||r.vehiculo==fv)&&cols.some(c=>cell(c,r).replace(/<[^>]+>/g,'').toLowerCase().includes(q))).sort((a,b)=>k=='historial'?String(b.fecha).localeCompare(String(a.fecha)):0);
+ const draw=()=>{const q=$('#q').value.toLowerCase(),fv=$('#fv')?$('#fv').value:'',rows=vis(k,get(k)).filter(r=>(!fv||r.vehiculo==fv)&&(!$('#fm')||!$('#fm').value||r.modulo==$('#fm').value)&&(!$('#fu')||!$('#fu').value||r.nombre==$('#fu').value)&&cols.some(c=>cell(c,r).replace(/<[^>]+>/g,'').toLowerCase().includes(q))).sort((a,b)=>k=='historial'?String(b.fecha).localeCompare(String(a.fecha)):0);
   $('#tb').innerHTML=rows.length?rows.map(r=>`<tr>${cols.map(c=>`<td>${cell(c,r)}</td>`).join('')}${ex.map(e=>`<td>${e[1](r)}</td>`).join('')}${noNew?'':`<td class="text-end text-nowrap"><button class="btn btn-sm btn-outline-primary" data-e="${r.id}"><i class="bi bi-pencil"></i></button>${noNew?'':` <button class="btn btn-sm btn-outline-danger" data-d="${r.id}"><i class="bi bi-trash"></i></button>`}</td>`}</tr>`).join(''):`<tr><td colspan="9" class="text-center text-muted py-4">Sin registros. ${m.ro?'':'Usa «Nuevo» para agregar el primero.'}</td></tr>`};
  const campos=r=>m.f.map(f=>{const cv=CV.includes(k),tc=m.f.some(x=>x[0]=='cliente');
   if(cv&&(f[0]=='cliente'||(f[0]=='vehiculo'&&!tc)))return cvHTML(r);
   if(cv&&f[0]=='vehiculo')return '';
   return `<label class="form-label mt-2">${f[1]}</label>${inp(f,r?r[f[0]]:(f[2]=='date'?hoy():''))}`}).join('');
  const open=r=>{cur=r;$('#err').textContent='';if(k=='cotizaciones'||k=='facturacion'){$('#fb').innerHTML=cotBody(r,k);['input','change'].forEach(ev=>$('#fb').addEventListener(ev,cotCalc));if(k=='facturacion')$('#fb').querySelector('[name=orden]').addEventListener('change',facCarga);cotCalc()}else $('#fb').innerHTML=campos(r)+(k=='recepcion'?fotosHTML():'');if(k=='pagos'){$('#fb').innerHTML=pagoBody(r);pagoBind(r)}if(CV.includes(k))cvBind(r);nuevas=[];if(k=='recepcion')fotosBind(r);modal.show()};
- window.__redraw=draw;draw();$('#q').oninput=draw;if($('#fv'))$('#fv').onchange=draw;
+ window.__redraw=draw;draw();$('#q').oninput=draw;if($('#fv'))$('#fv').onchange=draw;['fm','fu'].forEach(i=>{if($('#'+i))$('#'+i).onchange=draw});
  if(!noNew)$('#nw').onclick=()=>open(null);
  $('#tb').onclick=e=>{const b=e.target.closest('button');if(!b)return;
   if(b.dataset.p)return imprimir(b.dataset.p);
@@ -297,8 +365,9 @@ function crud(k){
   const r=get(k).find(x=>x.id==b.dataset.d),rest=get(k).filter(x=>x.id!=r.id);
   if(k=='usuarios'){if(r.id==u.id)return alert('No puedes eliminar tu propio usuario.');const er=chkUsuarios(rest,r);if(er)return alert(er)}
   if(k=='facturacion'&&pagado(r.id))return alert('Esta factura tiene pagos registrados. Elimina primero sus pagos.');
-  if(!confirm('¿Eliminar este registro?'))return;put(k,rest);log('Eliminó registro',k);draw()};
- $('#f').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));delete d.ff;let l=get(k);
+  if(!confirm('¿Eliminar este registro?'))return;const lab=regLbl(k,r),res=resumen(k,r);put(k,rest);log('Eliminó registro',k,lab,res);draw()};
+ $('#f').onsubmit=e=>{e.preventDefault();const prev=cur;const d=Object.fromEntries(new FormData(e.target));delete d.ff;let l=get(k);
+  if(DUP[k]){const [c,msg]=DUP[k];d[c]=String(d[c]||'').trim().replace(/\s+/g,' ');const x=l.find(y=>(!prev||y.id!=prev.id)&&nrm0(k,y[c])==nrm0(k,d[c]));if(x)return $('#err').textContent=msg(x)}
   if(k=='cotizaciones'||k=='facturacion'){if(k=='facturacion'&&l.some(x=>x.numero==d.numero&&(!cur||x.id!=cur.id)))return $('#err').textContent='Ese número de factura ya existe.';const c=cotCalc();if(!c.items.length)return $('#err').textContent='Selecciona al menos un servicio o repuesto.';if(k=='cotizaciones'&&d.estado=='Aprobada'&&!(cur&&cur.stockDesc)){const er=chkStock(c.items);if(er)return $('#err').textContent=er}Object.assign(d,{items:c.items,subtotal:c.sub,itbis:c.itbis,total:c.total,descripcion:c.items.map(x=>x.d+(x.c>1?' x'+x.c:'')).join(', ')})}
   if(k=='usuarios'&&!d.clave)delete d.clave;
   if(k=='diagnostico'){const o=get('ordenes').find(x=>x.id==d.orden);if(o)d.vehiculo=o.vehiculo}
@@ -314,7 +383,7 @@ function crud(k){
   if(k=='usuarios'){if(nl.filter(x=>x.usuario==reg.usuario).length>1)return $('#err').textContent='Ese nombre de usuario ya existe.';
    const er=chkUsuarios(nl,reg);if(er)return $('#err').textContent=er}
   
-  const pr=put(k,nl);log(cur?'Editó registro':'Creó registro',k);const msg=despues(k,reg,cur);if(k=='recepcion'&&nuevas.length){const fs=nuevas;nuevas=[];pr.then(ok=>ok&&subirFotos(reg.id,fs))}modal.hide();draw();if(msg)alert(msg)}}
+  const pr=put(k,nl);{const lab=regLbl(k,reg),xf=k=='recepcion'&&nuevas.length?`Fotos nuevas: ${nuevas.length}`:'';if(prev){const dd=[dif(k,prev,reg),xf].filter(Boolean).join('\n');log('Editó registro',k,lab,dd||'Sin cambios en los datos')}else log('Creó registro',k,lab,[resumen(k,reg),xf].filter(Boolean).join('\n'))}const msg=despues(k,reg,cur);if(k=='recepcion'&&nuevas.length){const fs=nuevas;nuevas=[];pr.then(ok=>ok&&subirFotos(reg.id,fs))}modal.hide();draw();if(msg)alert(msg)}}
 
 (async()=>{
  if(pg=='login')return login();
