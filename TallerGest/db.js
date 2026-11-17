@@ -33,7 +33,7 @@ const SCHEMA = {
   ejecucion: { cols: [['orden', 't', 'ordenes'], ['etapa', 't'], ['notas', 't'], ...AUD] },
   facturacion: { cols: [['numero', 't'], ['orden', 't', 'ordenes'], ['descripcion', 't'], ['items', 'j'], ['subtotal', 'n'], ['itbis', 'n'], ['total', 'n'], ['fecha', 'd'], ...AUD] },
   pagos: { cols: [['factura', 't', 'facturacion'], ['monto', 'n'], ['metodo', 't'], ['fecha', 'd'], ['detalle', 't'], ['recibido', 'n'], ['devuelta', 'n'], ['marca', 't'], ['ultimos4', 't'], ['autorizacion', 't'], ['cuotas', 't'], ['banco', 't'], ['referencia', 't'], ['ncheque', 't'], ['notas', 't'], ...AUD] },
-  auditoria: { cols: [['fecha', 't'], ['usuario', 't'], ['nombre', 't'], ['accion', 't'], ['modulo', 't'], ['creado', 'ts']] },
+  auditoria: { cols: [['fecha', 't'], ['usuario', 't'], ['nombre', 't'], ['accion', 't'], ['modulo', 't'], ['registro', 't'], ['detalle', 't'], ['creado', 'ts']] },
   notif: { cols: [['para', 't', 'usuarios', 'CASCADE'], ['texto', 't'], ['fecha', 't'], ['leida', 'b']] },
   cierres: { cols: [['por', 't'], ['nombre', 't'], ['desde', 'ts'], ['hasta', 'ts'], ['pagos', 'i'], ['total', 'n'], ['metodos', 'j']] },
   cfg: { cols: [['nombre', 't'], ['rnc', 't'], ['telefono', 't'], ['correo', 't'], ['direccion', 't'], ['pie', 't'], ['logo', 't']] }
@@ -44,15 +44,16 @@ for (const t of COLS) {
   s.cols.forEach(([k, ty]) => { s.map[k] = { sql: snake(k), ty }; });
 }
 
+function colDef([k, ty, ref, del]) {
+  let d = `${snake(k)} ${SQL_T[ty]}`;
+  if (k === 'creado') d += ' DEFAULT now()';
+  if (ref) d += ` REFERENCES ${ref}(id) ON DELETE ${del || 'RESTRICT'}`;
+  return d;
+}
 function ddl() {
   const out = ["CREATE SEQUENCE IF NOT EXISTS tg_seq START 1000"];
   for (const t of COLS) {
-    const cols = SCHEMA[t].cols.map(([k, ty, ref, del]) => {
-      let d = `${snake(k)} ${SQL_T[ty]}`;
-      if (k === 'creado') d += ' DEFAULT now()';
-      if (ref) d += ` REFERENCES ${ref}(id) ON DELETE ${del || 'RESTRICT'}`;
-      return d;
-    });
+    const cols = SCHEMA[t].cols.map(colDef);
     out.push(`CREATE TABLE IF NOT EXISTS ${t}(
   id TEXT PRIMARY KEY DEFAULT nextval('tg_seq')::text,
   seq BIGINT GENERATED ALWAYS AS IDENTITY,
@@ -60,6 +61,8 @@ function ddl() {
   extra JSONB NOT NULL DEFAULT '{}'
 )`);
   }
+  // Si se agregan columnas nuevas en versiones futuras, se crean solas en bases ya existentes
+  for (const t of COLS) for (const c of SCHEMA[t].cols) out.push(`ALTER TABLE ${t} ADD COLUMN IF NOT EXISTS ${colDef(c)}`);
   out.push('CREATE UNIQUE INDEX IF NOT EXISTS usuarios_usuario_uq ON usuarios (lower(usuario))');
   out.push(`CREATE TABLE IF NOT EXISTS recepcion_fotos(
   id TEXT PRIMARY KEY DEFAULT nextval('tg_seq')::text,
@@ -70,7 +73,17 @@ function ddl() {
   out.push('CREATE INDEX IF NOT EXISTS recepcion_fotos_rec ON recepcion_fotos(recepcion)');
   return out;
 }
-async function init() { for (const q of ddl()) await pool.query(q); }
+/* Reglas anti-duplicados (sin importar mayúsculas ni espacios). Si ya hay datos repetidos, avisa y sigue. */
+const UNICOS = [
+  'CREATE UNIQUE INDEX IF NOT EXISTS repuestos_desc_uq ON repuestos (lower(btrim(descripcion)))',
+  'CREATE UNIQUE INDEX IF NOT EXISTS repuestos_codigo_uq ON repuestos (lower(btrim(codigo)))',
+  'CREATE UNIQUE INDEX IF NOT EXISTS servicios_desc_uq ON servicios (lower(btrim(descripcion)))',
+  "CREATE UNIQUE INDEX IF NOT EXISTS vehiculos_placa_uq ON vehiculos (lower(regexp_replace(placa, '[[:space:]-]', '', 'g')))"
+];
+async function init() {
+  for (const q of ddl()) await pool.query(q);
+  for (const q of UNICOS) { try { await pool.query(q); } catch (e) { console.warn('AVISO: no se pudo crear una regla anti-duplicados (¿ya hay datos repetidos?):', e.message); } }
+}
 
 /* fila de la BD -> objeto JSON como lo espera el frontend (sin nulos) */
 function aObjeto(t, row) {
@@ -104,8 +117,15 @@ async function guardar(c, t, rec) {
   // Una columna 'creado' vacía no debe pisar la fecha por defecto al insertar
   await c.query(`INSERT INTO ${t}(${cols.join(',')}) VALUES(${ph}) ON CONFLICT(id) DO UPDATE SET ${upd}`, vals);
 }
+const MSG_UNICO = {
+  repuestos_desc_uq: 'Ya existe un repuesto con esa descripción.',
+  repuestos_codigo_uq: 'Ese código de repuesto ya existe. Cierra el formulario y vuelve a abrirlo para generar otro.',
+  servicios_desc_uq: 'Ya existe un servicio con esa descripción.',
+  vehiculos_placa_uq: 'Ya existe un vehículo con esa placa.',
+  usuarios_usuario_uq: 'Ese nombre de usuario ya existe.'
+};
 const traducir = e => e.code === '23503' ? 'No se puede completar: hay registros relacionados (por ejemplo, un cliente con vehículos o una orden con documentos). Elimina primero los dependientes.'
-  : e.code === '23505' ? 'Ya existe un registro con ese valor único (usuario o id repetido).'
+  : e.code === '23505' ? (MSG_UNICO[e.constraint] || 'Ya existe un registro con ese valor único.')
   : e.code === '22007' || e.code === '22008' ? 'Fecha no válida.' : e.message;
 
 module.exports = { pool, SCHEMA, COLS, init, aObjeto, aFila, guardar, traducir, ddl };

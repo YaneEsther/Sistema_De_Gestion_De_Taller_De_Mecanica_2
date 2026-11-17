@@ -14,7 +14,7 @@ const ahora = () => new Date().toLocaleString('es-DO', { timeZone: TZ });
 const wrap = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(e => { console.error(e); res.status(500).json({ error: traducir(e) }); });
 const rowsOf = async (sql, p = []) => (await pool.query(sql, p)).rows;
 const getUser = async id => { const r = await rowsOf('SELECT * FROM usuarios WHERE id=$1', [String(id)]); return r[0] ? aObjeto('usuarios', r[0]) : null; };
-const audit = (c, u, accion, modulo) => guardar(c, 'auditoria', { id: Date.now() + '-' + crypto.randomInt(1000), fecha: ahora(), usuario: u.usuario, nombre: u.nombre, accion, modulo });
+const audit = (c, u, accion, modulo, registro = '', detalle = '') => guardar(c, 'auditoria', { id: Date.now() + '-' + crypto.randomInt(1000), fecha: ahora(), usuario: u.usuario, nombre: u.nombre, accion, modulo, registro, detalle });
 
 async function arranque() {
   await init();
@@ -51,10 +51,10 @@ app.post('/api/login', wrap(async (req, res) => {
   if (f.n >= 8) return res.status(429).json({ error: 'Demasiados intentos. Espera unos minutos.' });
   const { usuario = '', clave = '' } = req.body || {};
   const r = await rowsOf('SELECT * FROM usuarios WHERE lower(usuario)=lower($1)', [String(usuario).trim()]), u = r[0] && aObjeto('usuarios', r[0]);
-  if (!u || !bcrypt.compareSync(String(clave), u.hash || '')) { f.n++; fails.set(ip, f); return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' }); }
-  if (u.estado !== 'Activo') return res.status(403).json({ error: 'Tu usuario está inactivo. Contacta al administrador.' });
+  if (!u || !bcrypt.compareSync(String(clave), u.hash || '')) { f.n++; fails.set(ip, f); if (u) await audit(pool, u, 'Intento de acceso fallido', 'Login', u.usuario, 'Contraseña incorrecta'); return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' }); }
+  if (u.estado !== 'Activo') { await audit(pool, u, 'Acceso denegado', 'Login', u.usuario, 'Usuario inactivo'); return res.status(403).json({ error: 'Tu usuario está inactivo. Contacta al administrador.' }); }
   fails.delete(ip);
-  await audit(pool, u, 'Inicio de sesión', 'Login');
+  await audit(pool, u, 'Inicio de sesión', 'Login', u.usuario);
   res.json({ token: jwt.sign({ id: u.id }, SECRET, { expiresIn: '12h' }), user: pub(u) });
 }));
 
@@ -127,7 +127,8 @@ app.post('/api/recepcion/:id/fotos', auth, soloRoles('admin', 'recepcion'), wrap
   if ((await rowsOf('SELECT count(*)::int AS n FROM recepcion_fotos WHERE recepcion=$1', [id]))[0].n >= MAX_FOTOS)
     return res.status(400).json({ error: `Máximo ${MAX_FOTOS} fotos por recepción.` });
   const r = await rowsOf('INSERT INTO recepcion_fotos(recepcion,nombre,tipo,datos,por) VALUES($1,$2,$3,$4,$5) RETURNING id', [id, String(nombre).slice(0, 120), tipo, buf, String(req.user.id)]);
-  await audit(pool, req.user, 'Subió foto de recepción', 'recepcion');
+  const rv = (await rowsOf('SELECT v.placa FROM recepcion r LEFT JOIN vehiculos v ON v.id=r.vehiculo WHERE r.id=$1', [id]))[0];
+  await audit(pool, req.user, 'Agregó foto', 'recepcion', rv && rv.placa ? 'Vehículo ' + rv.placa : 'Recepción ' + id, 'Foto: ' + (String(nombre).slice(0, 80) || 'sin nombre'));
   res.json({ ok: true, id: r[0].id });
 }));
 app.get('/api/fotos/:id', auth, soloRoles('admin', 'recepcion'), wrap(async (req, res) => {
@@ -136,19 +137,21 @@ app.get('/api/fotos/:id', auth, soloRoles('admin', 'recepcion'), wrap(async (req
   res.setHeader('Content-Type', r.tipo); res.setHeader('Cache-Control', 'private, max-age=86400'); res.send(r.datos);
 }));
 app.delete('/api/fotos/:id', auth, soloRoles('admin', 'recepcion'), wrap(async (req, res) => {
+  const fo = (await rowsOf('SELECT f.nombre, v.placa, f.recepcion FROM recepcion_fotos f LEFT JOIN recepcion r ON r.id=f.recepcion LEFT JOIN vehiculos v ON v.id=r.vehiculo WHERE f.id=$1', [String(req.params.id)]))[0];
   await pool.query('DELETE FROM recepcion_fotos WHERE id=$1', [String(req.params.id)]);
-  await audit(pool, req.user, 'Eliminó foto de recepción', 'recepcion');
+  if (fo) await audit(pool, req.user, 'Eliminó foto', 'recepcion', fo.placa ? 'Vehículo ' + fo.placa : 'Recepción ' + fo.recepcion, 'Foto: ' + (fo.nombre || 'sin nombre'));
   res.json({ ok: true });
-}));
-
-/* Respaldo en JSON de todas las tablas (las fotos no se incluyen; Neon también guarda historial de restauración) */
-app.get('/api/respaldo', auth, soloRoles('admin'), wrap(async (req, res) => {
-  const out = {};
-  for (const c of COLS) out[c] = (await rowsOf(`SELECT * FROM ${c} ORDER BY seq`)).map(r => aObjeto(c, r));
-  res.setHeader('Content-Disposition', 'attachment; filename="tallergest-respaldo.json"');
-  res.json(out);
 }));
 
 app.use(express.static(path.join(__dirname, 'public')));
 arranque().then(() => app.listen(PORT, '0.0.0.0', () => console.log('TallerGest en http://localhost:' + PORT + '  (BD: Postgres/Neon)')))
   .catch(e => { console.error('No se pudo iniciar (revisa DATABASE_URL):', e.message); process.exit(1); });
+
+
+// /* Respaldo en JSON de todas las tablas (las fotos no se incluyen; Neon también guarda historial de restauración) */
+// app.get('/api/respaldo', auth, soloRoles('admin'), wrap(async (req, res) => {
+//   const out = {};
+//   for (const c of COLS) out[c] = (await rowsOf(`SELECT * FROM ${c} ORDER BY seq`)).map(r => aObjeto(c, r));
+//   res.setHeader('Content-Disposition', 'attachment; filename="tallergest-respaldo.json"');
+//   res.json(out);
+// }));
