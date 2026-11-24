@@ -1,0 +1,43 @@
+---
+title: "TallerGest"
+description: "Sistema de gestión para talleres mecánicos"
+---
+
+**TallerGest** organiza el trabajo de un taller mecánico: desde que el cliente deja su vehículo hasta que paga la factura.
+Versión 3.0.0. Servidor Node.js + Express, base de datos PostgreSQL (Neon) y una interfaz web con Bootstrap.
+
+<CardGroup cols={2}>
+  <Card title="Inicio rápido" icon="rocket" href="/inicio-rapido">Instálalo y ábrelo en tu computadora.</Card>
+  <Card title="Flujo de una orden" icon="route" href="/flujo-de-una-orden">Del ingreso del vehículo al pago.</Card>
+  <Card title="Guías por rol" icon="users" href="/guias/administrador">Paso a paso para cada tipo de usuario.</Card>
+  <Card title="Referencia técnica" icon="code" href="/arquitectura">Arquitectura, base de datos y API.</Card>
+</CardGroup>
+
+## Qué incluye
+- **Registro de clientes** — Administrador, Recepcionista
+- **Registro de vehículos** — Administrador, Recepcionista
+- **Historial de mantenimiento** — Administrador, Recepcionista, Mecánico
+- **Recepción del vehículo** — Administrador, Recepcionista
+- **Diagnóstico** — Administrador, Mecánico
+- **Órdenes de trabajo** — Administrador, Recepcionista, Mecánico
+- **Asignación de mecánicos** — Administrador, Recepcionista
+- **Gestión de servicios** — Administrador, Recepcionista
+- **Gestión de repuestos** — Administrador, Mecánico
+- **Cotizaciones** — Administrador, Recepcionista, Facturador
+- **Aprobación del cliente** — Administrador, Recepcionista
+- **Ejecución del trabajo** — Administrador, Mecánico
+- **Facturación** — Administrador, Facturador
+- **Pagos** — Administrador, Facturador
+- **Usuarios y roles** — Administrador
+- **Auditoría** — Administrador
+- **Reportes** — Administrador, Facturador
+- **Configuración** — Administrador
+- **Centro de ayuda** — Administrador, Recepcionista, Mecánico, Facturador
+
+## Roles
+| Rol | Qué hace |
+|---|---|
+| Administrador | Tienes acceso a todos los módulos. Tu trabajo principal es supervisar el taller, administrar usuarios y revisar la auditoría. |
+| Mecánico | Solo ves las órdenes que te asignaron. Tu trabajo es diagnosticar, pedir lo que necesitas, registrar el avance y finalizar los trabajos. |
+| Recepcionista | Recibes al cliente y a su vehículo, abres la orden de trabajo y das seguimiento hasta la entrega. |
+| Facturador | Preparas cotizaciones, facturas y cobros, y haces el cierre de caja de tu turno. |

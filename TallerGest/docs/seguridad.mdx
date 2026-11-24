@@ -1,0 +1,12 @@
+---
+title: "Seguridad"
+description: "Cómo se protege el sistema"
+---
+
+- **Contraseñas** guardadas con bcrypt (nunca en texto plano).
+- **Sesiones** con token firmado (JWT, 12 horas) ligado a una sesión en la base de datos: al cerrar o reemplazar la sesión, el token deja de servir.
+- **Una sola sesión** por usuario.
+- **Límite de intentos** de inicio de sesión por dirección IP.
+- **Roles**: el servidor valida el rol en las operaciones sensibles (usuarios, configuración, fotos); el resto del control fino está en la interfaz.
+- **Auditoría** de cambios y accesos, solo visible para el administrador.
+- **Secretos** en variables de entorno (`.env` no se sube al repositorio).

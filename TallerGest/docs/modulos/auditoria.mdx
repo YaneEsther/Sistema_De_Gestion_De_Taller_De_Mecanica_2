@@ -1,0 +1,26 @@
+---
+title: "Auditoría"
+description: "Auditoría (solo lectura, solo administrador): quién hizo qué, sobre qué registro y qué datos cambiaron"
+---
+
+<Info>Acceso: Administrador</Info>
+
+## Campos
+| Campo | Tipo | Detalle |
+|---|---|---|
+| Fecha y hora | Texto |  |
+| Usuario | Texto |  |
+| Acción | Texto |  |
+| Módulo | Texto |  |
+| Registro | Texto |  |
+| Detalle del cambio | Texto |  |
+
+## Reglas
+- Solo lectura para todos los roles.
+
+## Cómo se usa
+### Revisar la auditoría · Administrador
+1. Entra a «Auditoría».
+2. Filtra por módulo o por usuario, o usa el buscador.
+3. Cada fila indica quién hizo el cambio, sobre qué registro y qué datos cambiaron (valor anterior → valor nuevo). Si se creó un registro, muestra los datos que se agregaron.
+4. También quedan los cambios automáticos (estados de las órdenes, descuentos de stock), las fotos y los accesos fallidos.

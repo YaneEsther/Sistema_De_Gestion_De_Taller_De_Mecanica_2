@@ -1,4 +1,4 @@
-/* TallerGest – capa de base de datos (Postgres / Neon). Una tabla por módulo. */
+/* TallerGest – capa de base de datos (Postgres / Neon). Una tabla por modulo. */
 const { Pool, types } = require('pg');
 types.setTypeParser(1700, v => (v === null ? null : parseFloat(v)));      // NUMERIC -> number
 types.setTypeParser(20, v => (v === null ? null : parseInt(v, 10)));       // BIGINT -> number
@@ -11,31 +11,31 @@ const local = /localhost|127\.0\.0\.1/.test(URL_BD);
 const pool = new Pool({ connectionString: URL_BD, ssl: local ? false : { rejectUnauthorized: true }, max: 5, idleTimeoutMillis: 30000, connectionTimeoutMillis: 20000 });
 pool.on('error', e => console.error('Conexión inactiva cerrada por la BD (se reabre sola):', e.message));
 
-/* Tipos: t=texto, n=número decimal, i=entero, d=fecha, ts=fecha y hora, b=booleano, j=JSON */
+/* Tipos: t=texto, n=numero decimal, i=entero, d=fecha, ts=fecha y hora, b=booleano, j=JSON */
 const SQL_T = { t: 'TEXT', n: 'NUMERIC', i: 'INTEGER', d: 'DATE', ts: 'TIMESTAMPTZ', b: 'BOOLEAN', j: 'JSONB' };
 const snake = k => k.replace(/[A-Z]/g, m => '_' + m.toLowerCase());
-const AUD = [['por', 't'], ['porNombre', 't'], ['creado', 'ts']]; // quién y cuándo lo creó (lo llena la app)
+const AUD = [['por', 't'], ['porNombre', 't'], ['creado', 'ts']]; // quien y cuando lo creo (lo llena la app)
 
 /* tabla -> columnas [clave, tipo, referencia?]. El orden respeta las dependencias (padres primero). */
 const SCHEMA = {
   usuarios: { cols: [['usuario', 't'], ['nombre', 't'], ['rol', 't'], ['estado', 't'], ['hash', 't']] },
   clientes: { cols: [['nombre', 't'], ['telefono', 't'], ['correo', 't'], ['direccion', 't'], ...AUD] },
   vehiculos: { cols: [['placa', 't'], ['marca', 't'], ['modelo', 't'], ['anio', 'i'], ['cliente', 't', 'clientes'], ...AUD] },
-  ordenes: { cols: [['codigo', 't'], ['cliente', 't', 'clientes'], ['vehiculo', 't', 'vehiculos'], ['estado', 't'], ['fecha', 'd'], ['motivo', 't'], ...AUD] },
+  ordenes: { cols: [['codigo', 't'], ['cliente', 't', 'clientes'], ['vehiculo', 't', 'vehiculos'], ['estado', 't'], ['fecha', 'd'], ['motivo', 't'], ['actualizado', 'ts'], ...AUD] },
   historial: { cols: [['vehiculo', 't', 'vehiculos'], ['cliente', 't', 'clientes'], ['orden', 't', 'ordenes'], ['fecha', 'd'], ['servicio', 't'], ['km', 'i'], ['tecnico', 't'], ...AUD] },
   recepcion: { cols: [['cliente', 't', 'clientes'], ['vehiculo', 't', 'vehiculos'], ['orden', 't', 'ordenes'], ['fecha', 'd'], ['km', 'i'], ['obs', 't'], ...AUD] },
-  diagnostico: { cols: [['orden', 't', 'ordenes'], ['vehiculo', 't', 'vehiculos'], ['resultado', 't'], ['hallazgos', 't'], ...AUD] },
+  diagnostico: { cols: [['orden', 't', 'ordenes'], ['vehiculo', 't', 'vehiculos'], ['resultado', 't'], ['hallazgos', 't'], ['necesidades', 'j'], ['otras', 't'], ...AUD] },
   mecanicos: { cols: [['orden', 't', 'ordenes'], ['mecanico', 't', 'usuarios'], ['fecha', 'd'], ...AUD] },
   servicios: { cols: [['descripcion', 't'], ['categoria', 't'], ['precio', 'n'], ...AUD] },
   repuestos: { cols: [['codigo', 't'], ['descripcion', 't'], ['stock', 'i'], ['precio', 'n'], ...AUD] },
-  cotizaciones: { cols: [['orden', 't', 'ordenes'], ['descripcion', 't'], ['items', 'j'], ['subtotal', 'n'], ['itbis', 'n'], ['total', 'n'], ['estado', 't'], ['stockDesc', 'b'], ...AUD] },
+  cotizaciones: { cols: [['orden', 't', 'ordenes'], ['descripcion', 't'], ['items', 'j'], ['subtotal', 'n'], ['itbis', 'n'], ['total', 'n'], ['estado', 't'], ['stockDesc', 'b'], ['nota', 't'], ...AUD] },
   aprobacion: { cols: [['cotizacion', 't', 'cotizaciones'], ['decision', 't'], ['fecha', 'd'], ['comentario', 't'], ...AUD] },
   ejecucion: { cols: [['orden', 't', 'ordenes'], ['etapa', 't'], ['notas', 't'], ...AUD] },
   facturacion: { cols: [['numero', 't'], ['orden', 't', 'ordenes'], ['descripcion', 't'], ['items', 'j'], ['subtotal', 'n'], ['itbis', 'n'], ['total', 'n'], ['fecha', 'd'], ...AUD] },
   pagos: { cols: [['factura', 't', 'facturacion'], ['monto', 'n'], ['metodo', 't'], ['fecha', 'd'], ['detalle', 't'], ['recibido', 'n'], ['devuelta', 'n'], ['marca', 't'], ['ultimos4', 't'], ['autorizacion', 't'], ['cuotas', 't'], ['banco', 't'], ['referencia', 't'], ['ncheque', 't'], ['notas', 't'], ...AUD] },
   auditoria: { cols: [['fecha', 't'], ['usuario', 't'], ['nombre', 't'], ['accion', 't'], ['modulo', 't'], ['registro', 't'], ['detalle', 't'], ['creado', 'ts']] },
   notif: { cols: [['para', 't', 'usuarios', 'CASCADE'], ['texto', 't'], ['fecha', 't'], ['leida', 'b']] },
-  cierres: { cols: [['por', 't'], ['nombre', 't'], ['desde', 'ts'], ['hasta', 'ts'], ['pagos', 'i'], ['total', 'n'], ['metodos', 'j']] },
+  cierres: { cols: [['por', 't'], ['nombre', 't'], ['rol', 't'], ['desde', 'ts'], ['hasta', 'ts'], ['pagos', 'i'], ['total', 'n'], ['metodos', 'j'], ['resumen', 't']] },
   cfg: { cols: [['nombre', 't'], ['rnc', 't'], ['telefono', 't'], ['correo', 't'], ['direccion', 't'], ['pie', 't'], ['logo', 't']] }
 };
 const COLS = Object.keys(SCHEMA);
@@ -71,6 +71,14 @@ function ddl() {
   por TEXT, creado TIMESTAMPTZ NOT NULL DEFAULT now()
 )`);
   out.push('CREATE INDEX IF NOT EXISTS recepcion_fotos_rec ON recepcion_fotos(recepcion)');
+  out.push(`CREATE TABLE IF NOT EXISTS sesiones(
+  id TEXT PRIMARY KEY,
+  usuario TEXT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  creado TIMESTAMPTZ NOT NULL DEFAULT now(),
+  ultima TIMESTAMPTZ NOT NULL DEFAULT now(),
+  ip TEXT, agente TEXT
+)`);
+  out.push('CREATE INDEX IF NOT EXISTS sesiones_usuario ON sesiones(usuario)');
   return out;
 }
 /* Reglas anti-duplicados (sin importar mayúsculas ni espacios). Si ya hay datos repetidos, avisa y sigue. */
@@ -124,8 +132,18 @@ const MSG_UNICO = {
   vehiculos_placa_uq: 'Ya existe un vehículo con esa placa.',
   usuarios_usuario_uq: 'Ese nombre de usuario ya existe.'
 };
-const traducir = e => e.code === '23503' ? 'No se puede completar: hay registros relacionados (por ejemplo, un cliente con vehículos o una orden con documentos). Elimina primero los dependientes.'
-  : e.code === '23505' ? (MSG_UNICO[e.constraint] || 'Ya existe un registro con ese valor único.')
-  : e.code === '22007' || e.code === '22008' ? 'Fecha no válida.' : e.message;
+const TABLAS = { clientes: 'clientes', vehiculos: 'vehículos', ordenes: 'órdenes de trabajo', historial: 'historial', recepcion: 'recepciones', diagnostico: 'diagnósticos', mecanicos: 'asignaciones de mecánico', cotizaciones: 'cotizaciones', aprobacion: 'aprobaciones', ejecucion: 'ejecuciones', facturacion: 'facturas', pagos: 'pagos', usuarios: 'usuarios', notif: 'notificaciones', recepcion_fotos: 'fotos de recepción' };
+function traducir(e) {
+  if (e.code === '23503') {
+    const d = e.detail || '';
+    const ref = d.match(/is still referenced from table "([^"]+)"/), falta = d.match(/is not present in table "([^"]+)"/);
+    if (ref) return `No se puede eliminar: todavía hay ${TABLAS[ref[1]] || ref[1]} relacionados con este registro. Elimínalos primero.`;
+    if (falta) return `Falta un dato relacionado: el registro de «${TABLAS[falta[1]] || falta[1]}» que elegiste ya no existe. Actualiza la página e inténtalo de nuevo.`;
+    return 'Hay un problema con registros relacionados. Actualiza la página e inténtalo de nuevo.';
+  }
+  if (e.code === '23505') return MSG_UNICO[e.constraint] || 'Ya existe un registro con ese valor único.';
+  if (e.code === '22007' || e.code === '22008') return 'Fecha no válida.';
+  return e.message;
+}
 
 module.exports = { pool, SCHEMA, COLS, init, aObjeto, aFila, guardar, traducir, ddl };

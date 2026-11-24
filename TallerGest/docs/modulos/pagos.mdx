@@ -1,0 +1,32 @@
+---
+title: "Pagos"
+description: "Pagos (formulario según el método; pagos parciales; nunca más que el saldo)"
+---
+
+<Info>Acceso: Administrador, Facturador</Info>
+
+## Campos
+| Campo | Tipo | Detalle |
+|---|---|---|
+| Factura | Relación con «Facturación» |  |
+| Monto (RD$) | Número |  |
+| Método de pago | Lista | Efectivo, Tarjeta de crédito, Tarjeta de débito, Transferencia, Cheque |
+| Fecha | Fecha |  |
+| Detalle | Texto |  |
+
+## Reglas
+- Permite filtrar «Solo mis registros de este turno».
+- Al guardar dispara acciones automáticas (cambio de estado de la orden, avisos a otros roles, stock o historial).
+- Su formulario incluye secciones especiales además de los campos básicos.
+
+## Cómo se usa
+### Leer las notas de la orden antes de facturar o cobrar · Facturador
+1. Al elegir la orden en «Facturación», o la factura en «Pagos», aparece un recuadro azul con las notas: lo que reportó el cliente, la nota de la cotización y lo que el cliente comentó al aprobar (por ejemplo, cómo desea pagar).
+2. Así no hace falta volver a preguntárselo al cliente.
+3. También puedes verlas con el ojo en cada fila.
+
+### Registrar un pago · Facturador
+1. Entra a «Pagos» → «Nuevo» y elige la factura (escribe el número o el cliente).
+2. Selecciona el método (efectivo, tarjeta, transferencia o cheque) y completa los datos que pide. En efectivo se calcula la devuelta.
+3. Se permiten pagos parciales, pero no cobrar más que el saldo.
+4. Cuando se cubre el total, la orden pasa a «Pagada».

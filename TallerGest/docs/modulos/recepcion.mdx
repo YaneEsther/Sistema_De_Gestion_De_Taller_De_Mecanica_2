@@ -1,0 +1,28 @@
+---
+title: "Recepción del vehículo"
+description: "Recepción del vehículo (cliente → vehículo, observaciones y fotos de evidencia; crea la orden de trabajo solo)"
+---
+
+<Info>Acceso: Administrador, Recepcionista</Info>
+
+## Campos
+| Campo | Tipo | Detalle |
+|---|---|---|
+| Vehículo | Relación con «Registro de vehículos» |  |
+| Fecha | Fecha |  |
+| Kilometraje | Número |  |
+| Observaciones | Texto largo |  |
+
+## Reglas
+- Permite filtrar «Solo mis registros de este turno».
+- El cliente se elige escribiendo su nombre y luego se elige uno de sus vehículos (se puede registrar otro vehículo desde el mismo formulario).
+- Al guardar dispara acciones automáticas (cambio de estado de la orden, avisos a otros roles, stock o historial).
+- Su formulario incluye secciones especiales además de los campos básicos.
+
+## Cómo se usa
+### Recibir un vehículo (con fotos) · Recepcionista
+1. Entra a «Recepción del vehículo» → «Nuevo».
+2. En «Cliente» escribe parte del nombre y elígelo de la lista. Después elige su vehículo.
+3. Indica la fecha, el kilometraje y anota las observaciones (golpes, rayones, objetos dejados en el vehículo).
+4. Adjunta las fotos del vehículo (hasta 12). Son la evidencia de cómo lo entregó el cliente.
+5. Al guardar, se crea automáticamente la orden de trabajo (OT-001, OT-002...).

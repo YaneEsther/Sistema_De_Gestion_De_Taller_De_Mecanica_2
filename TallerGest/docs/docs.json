@@ -1,0 +1,67 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "TallerGest",
+  "description": "Documentación de TallerGest, sistema de gestión para talleres mecánicos",
+  "colors": {
+    "primary": "#1E3A6D",
+    "light": "#D18B00",
+    "dark": "#1E3A6D"
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "Primeros pasos",
+        "pages": [
+          "index",
+          "inicio-rapido",
+          "conceptos",
+          "flujo-de-una-orden",
+          "roles-y-permisos"
+        ]
+      },
+      {
+        "group": "Guías por rol",
+        "pages": [
+          "guias/administrador",
+          "guias/mecanico",
+          "guias/recepcionista",
+          "guias/facturador"
+        ]
+      },
+      {
+        "group": "Módulos",
+        "pages": [
+          "modulos/clientes",
+          "modulos/vehiculos",
+          "modulos/historial",
+          "modulos/recepcion",
+          "modulos/diagnostico",
+          "modulos/ordenes",
+          "modulos/mecanicos",
+          "modulos/servicios",
+          "modulos/repuestos",
+          "modulos/cotizaciones",
+          "modulos/aprobacion",
+          "modulos/ejecucion",
+          "modulos/facturacion",
+          "modulos/pagos",
+          "modulos/usuarios",
+          "modulos/auditoria",
+          "modulos/reportes",
+          "modulos/configuracion",
+          "modulos/ayuda"
+        ]
+      },
+      {
+        "group": "Referencia técnica",
+        "pages": [
+          "arquitectura",
+          "base-de-datos",
+          "api",
+          "seguridad"
+        ]
+      }
+    ]
+  }
+}

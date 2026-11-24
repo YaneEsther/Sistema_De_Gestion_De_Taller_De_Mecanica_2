@@ -1,0 +1,26 @@
+---
+title: "Aprobación del cliente"
+description: "Aprobación del cliente (se identifica la cotización por cliente, vehículo, orden y monto)"
+---
+
+<Info>Acceso: Administrador, Recepcionista</Info>
+
+## Campos
+| Campo | Tipo | Detalle |
+|---|---|---|
+| Cotización | Relación con «Cotizaciones» |  |
+| Decisión | Lista | Aprobada, Rechazada |
+| Fecha | Fecha |  |
+| Observaciones del cliente (por ejemplo, cómo desea pagar) | Texto largo |  |
+
+## Reglas
+- Permite filtrar «Solo mis registros de este turno».
+- Al guardar dispara acciones automáticas (cambio de estado de la orden, avisos a otros roles, stock o historial).
+- Su formulario incluye secciones especiales además de los campos básicos.
+
+## Cómo se usa
+### Registrar la respuesta del cliente a una cotización · Recepcionista
+1. Cuando te llegue el aviso de una nueva cotización, comunícate con el cliente.
+2. En «Aprobación del cliente» elige la cotización: se muestra el cliente, el vehículo, los ítems y el total para que sepas cuál es.
+3. Marca «Aprobada» o «Rechazada» y anota en observaciones lo que el cliente diga (por ejemplo, cómo desea pagar): lo verá el facturador.
+4. Si se aprueba, se descuenta el stock de repuestos y se avisa a facturación y al mecánico.

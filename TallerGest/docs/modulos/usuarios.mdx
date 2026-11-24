@@ -1,0 +1,28 @@
+---
+title: "Usuarios y roles"
+description: "Usuarios y roles (solo administrador)"
+---
+
+<Info>Acceso: Administrador</Info>
+
+## Campos
+| Campo | Tipo | Detalle |
+|---|---|---|
+| Usuario | Texto |  |
+| Nombre completo | Texto |  |
+| Contraseña | Contraseña |  |
+| Rol | Lista | Administrador, Mecánico, Recepcionista, Facturador |
+| Estado | Lista | Activo, Inactivo |
+
+## Reglas
+- No permite repetidos en **Usuario** (ignora mayúsculas, tildes y espacios).
+- Valida antes de eliminar (no se borra si hay registros relacionados).
+
+## Cómo se usa
+### Crear o editar usuarios · Administrador
+1. Entra a «Usuarios y roles» y pulsa «Nuevo».
+2. Escribe usuario, nombre completo y contraseña, y elige el rol (Administrador, Recepcionista, Mecánico o Facturador).
+3. Si el usuario ya existe, el sistema te avisa mientras escribes. No se aceptan repetidos (da igual si usas mayúsculas o tildes).
+4. Para dejar sin acceso a alguien sin borrarlo, edítalo y cambia su estado a «Inactivo».
+5. Para cambiar una contraseña, edita el usuario y escribe la nueva; si dejas el campo vacío no cambia.
+6. La columna «Sesión» muestra quién está en línea en este momento.

@@ -1,0 +1,23 @@
+---
+title: "Asignación de mecánicos"
+description: "Asignación de mecánicos (solo órdenes «Recibida»; el mecánico recibe un aviso)"
+---
+
+<Info>Acceso: Administrador, Recepcionista</Info>
+
+## Campos
+| Campo | Tipo | Detalle |
+|---|---|---|
+| Orden de trabajo | Relación con «Órdenes de trabajo» |  |
+| Mecánico | Relación con «Usuarios y roles» |  |
+| Fecha de asignación | Fecha |  |
+
+## Reglas
+- Permite filtrar «Solo mis registros de este turno».
+- Al guardar dispara acciones automáticas (cambio de estado de la orden, avisos a otros roles, stock o historial).
+
+## Cómo se usa
+### Asignar un mecánico · Recepcionista
+1. Entra a «Asignación de mecánicos» → «Nuevo».
+2. Elige la orden (solo aparecen las «Recibidas») y el mecánico activo.
+3. El mecánico recibe una notificación.

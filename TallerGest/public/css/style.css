@@ -20,3 +20,5 @@ body{background:var(--claro);color:var(--oscuro);font-family:system-ui,"Segoe UI
 .login-card{width:100%;max-width:400px}
 .logo{font-size:2rem;font-weight:800;color:var(--azul)}.logo span{color:var(--dorado)}
 @media print{.sidebar,.topbar,.no-print{display:none!important}}
+.combo-opt.combo-act{background:#E9EDF2}
+.combo-list .list-group-item{border-left:0;border-right:0}
