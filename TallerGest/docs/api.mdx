@@ -1,0 +1,18 @@
+---
+title: "API"
+description: "Endpoints del servidor"
+---
+
+Todas las rutas (salvo el login) requieren el encabezado `Authorization: Bearer <token>`.
+
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| `POST` | `/api/login` | Público | Inicia sesión (409 si ya hay una sesión activa; `forzar: true` cierra la anterior) |
+| `POST` | `/api/logout` | Cualquier usuario con sesión | Cierra la sesión actual |
+| `GET` | `/api/data` | Cualquier usuario con sesión | Devuelve todos los módulos que puede ver el usuario |
+| `POST` | `/api/data/:col` | Cualquier usuario con sesión | Guarda cambios `&#123;up:[...], del:[ids]&#125;` de un módulo |
+| `POST` | `/api/recepcion/:id/fotos` | Administrador, Recepcionista | Sube una foto (JPG, PNG o WebP, máx. 3 MB) |
+| `GET` | `/api/fotos/:id` | Administrador, Recepcionista, Mecánico | Devuelve la imagen de una foto |
+| `DELETE` | `/api/fotos/:id` | Administrador, Recepcionista | Elimina una foto |
+
+<Note>Los módulos de `/api/data/:col` son: `usuarios`, `clientes`, `vehiculos`, `ordenes`, `historial`, `recepcion`, `diagnostico`, `mecanicos`, `servicios`, `repuestos`, `cotizaciones`, `aprobacion`, `ejecucion`, `facturacion`, `pagos`, `auditoria`, `notif`, `cierres`, `cfg`. Algunos solo los puede escribir el administrador (`usuarios`, `cfg`).</Note>

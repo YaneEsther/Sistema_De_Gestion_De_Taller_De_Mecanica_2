@@ -1,0 +1,30 @@
+---
+title: "Registro de vehículos"
+description: "Registro de vehículos (cada vehículo pertenece a un cliente; un cliente puede tener varios)"
+---
+
+<Info>Acceso: Administrador, Recepcionista</Info>
+
+## Campos
+| Campo | Tipo | Detalle |
+|---|---|---|
+| Placa / VIN | Texto |  |
+| Marca | Texto |  |
+| Modelo | Texto |  |
+| Año | Número |  |
+| Cliente | Relación con «Registro de clientes» |  |
+
+## Reglas
+- No permite repetidos en **Placa / VIN** (ignora mayúsculas, tildes y espacios).
+- Permite filtrar «Solo mis registros de este turno».
+
+## Cómo se usa
+### Registrar un cliente y su vehículo · Recepcionista
+1. Entra a «Registro de clientes» → «Nuevo» y completa nombre, teléfono, correo y dirección.
+2. Luego entra a «Registro de vehículos» → «Nuevo»: placa o VIN, marca, modelo, año y el cliente dueño.
+3. La placa no se puede repetir.
+
+### El cliente trae otro vehículo · Recepcionista
+1. Un cliente puede tener todos los vehículos que quiera.
+2. En la recepción, elige al cliente y pulsa «Registrar otro vehículo de este cliente»: llena placa, marca, modelo y año, y guarda. Queda seleccionado al instante.
+3. También lo puedes hacer desde «Registro de vehículos».

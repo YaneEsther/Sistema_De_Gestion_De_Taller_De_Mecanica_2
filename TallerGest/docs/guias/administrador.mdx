@@ -1,0 +1,88 @@
+---
+title: "Guía: Administrador"
+description: "Tienes acceso a todos los módulos. Tu trabajo principal es supervisar el taller, administrar usuarios y revisar la auditoría."
+---
+
+## ¿Cómo hago...?
+<AccordionGroup>
+  <Accordion title="Crear o editar usuarios">
+    <Steps>
+      <Step title="Entra a «Usuarios y roles» y pulsa «Nuevo»." />
+      <Step title="Escribe usuario, nombre completo y contraseña, y elige el rol (Administrador, Recepcionista, Mecánico o Facturador)." />
+      <Step title="Si el usuario ya existe, el sistema te avisa mientras escribes. No se aceptan repetidos (da igual si usas mayúsculas o tildes)." />
+      <Step title="Para dejar sin acceso a alguien sin borrarlo, edítalo y cambia su estado a «Inactivo»." />
+      <Step title="Para cambiar una contraseña, edita el usuario y escribe la nueva; si dejas el campo vacío no cambia." />
+      <Step title="La columna «Sesión» muestra quién está en línea en este momento." />
+    </Steps>
+  </Accordion>
+  <Accordion title="Revisar la auditoría">
+    <Steps>
+      <Step title="Entra a «Auditoría»." />
+      <Step title="Filtra por módulo o por usuario, o usa el buscador." />
+      <Step title="Cada fila indica quién hizo el cambio, sobre qué registro y qué datos cambiaron (valor anterior → valor nuevo). Si se creó un registro, muestra los datos que se agregaron." />
+      <Step title="También quedan los cambios automáticos (estados de las órdenes, descuentos de stock), las fotos y los accesos fallidos." />
+    </Steps>
+  </Accordion>
+  <Accordion title="Configurar los datos del taller">
+    <Steps>
+      <Step title="En «Configuración» completa nombre, RNC, teléfono, correo, dirección, pie de página y logo." />
+      <Step title="Estos datos aparecen en las cotizaciones, facturas y reportes impresos." />
+    </Steps>
+  </Accordion>
+  <Accordion title="Corregir el estado de una orden">
+    <Steps>
+      <Step title="El estado cambia solo, según avanza el trabajo." />
+      <Step title="Si hubo un error, solo el administrador puede editar la orden y cambiar su estado manualmente." />
+    </Steps>
+  </Accordion>
+  <Accordion title="Consultar reportes y cierres de caja">
+    <Steps>
+      <Step title="En «Reportes» filtra por fechas, cajero y método de pago." />
+      <Step title="Puedes exportar a Excel o imprimir en PDF." />
+      <Step title="Al final se listan los cierres de caja realizados." />
+    </Steps>
+  </Accordion>
+</AccordionGroup>
+
+## Preguntas frecuentes
+<AccordionGroup>
+  <Accordion title="¿Puedo eliminar o desactivar al único administrador?">
+    No. Siempre debe quedar al menos un administrador activo.
+  </Accordion>
+  <Accordion title="¿Dónde veo las copias de seguridad de la base de datos?">
+    La base de datos está en Neon, que conserva el historial de cambios y permite restaurar desde su propio panel.
+  </Accordion>
+  <Accordion title="Un usuario dice que ya tiene una sesión activa pero no está conectado">
+    Si cerró el navegador sin pulsar «Salir», la sesión deja de contar unos 3 minutos después. También puede usar el botón «Cerrar la otra sesión e iniciar aquí» en la pantalla de inicio.
+  </Accordion>
+  <Accordion title="¿Qué es la campana de arriba?">
+    Muestra tus notificaciones: avisos cuando otra área termina un paso que te corresponde. Se marcan como leídas al abrirla.
+  </Accordion>
+  <Accordion title="¿Cómo busco un cliente, un vehículo o una orden al llenar un formulario?">
+    Haz clic en el campo y escribe parte del nombre, la placa o el número: la lista se filtra sola. Elige con el clic o con las flechas y Enter.
+  </Accordion>
+  <Accordion title="¿Para qué sirve el ojo en cada fila?">
+    Abre una ventana con todos los datos del registro en solo lectura, incluidas las notas y los ítems. No cambia nada.
+  </Accordion>
+  <Accordion title="¿Cómo veo más o menos registros en las tablas?">
+    Abajo de cada tabla elige cuántos mostrar (5, 10, 25, 50 o 100) y usa los números para cambiar de página. La pantalla recuerda tu elección.
+  </Accordion>
+  <Accordion title="¿Qué es «Mis registros de este turno»?">
+    Tu turno empieza en tu último cierre o a las 00:00 del día. Ese filtro muestra solo lo que registraste tú desde entonces; al cerrar turno o cambiar de día, vuelve a empezar. «Todos los registros» muestra todo.
+  </Accordion>
+  <Accordion title="Dice que ya tengo una sesión activa">
+    Cada usuario solo puede estar conectado en un lugar a la vez. Cierra sesión en el otro dispositivo o pestaña, o usa «Cerrar la otra sesión e iniciar aquí».
+  </Accordion>
+  <Accordion title="¿Cómo cambio mi contraseña?">
+    Pídele al administrador que la cambie desde «Usuarios y roles».
+  </Accordion>
+  <Accordion title="¿Por qué no me deja eliminar un registro?">
+    Si tiene otros registros relacionados (por ejemplo, un cliente con vehículos), primero hay que eliminar esos registros.
+  </Accordion>
+  <Accordion title="¿Dónde queda constancia de lo que hago?">
+    Cada alta, cambio o eliminación queda guardada en la auditoría, con tu nombre, la fecha y los datos que cambiaron.
+  </Accordion>
+  <Accordion title="La pantalla no muestra lo último que se registró">
+    Los datos se actualizan solos cada pocos segundos. Si no ocurre, recarga la página.
+  </Accordion>
+</AccordionGroup>

@@ -1,0 +1,26 @@
+---
+title: "Diagnóstico"
+description: "Diagnóstico (el mecánico también indica qué repuestos y servicios necesita; quien cotiza lo ve)"
+---
+
+<Info>Acceso: Administrador, Mecánico</Info>
+
+## Campos
+| Campo | Tipo | Detalle |
+|---|---|---|
+| Orden de trabajo | Relación con «Órdenes de trabajo» |  |
+| Resultado | Lista | Sin anomalías, Con fallas, Requiere revisión adicional |
+| Descripción / hallazgos | Texto largo |  |
+
+## Reglas
+- Permite filtrar «Solo mis registros de este turno».
+- Al guardar dispara acciones automáticas (cambio de estado de la orden, avisos a otros roles, stock o historial).
+- Su formulario incluye secciones especiales además de los campos básicos.
+
+## Cómo se usa
+### Registrar un diagnóstico y pedir repuestos · Mecánico
+1. Entra a «Diagnóstico» → «Nuevo» y elige la orden (estado «Recibida»). Debajo verás los datos de la orden.
+2. Selecciona el resultado y describe los hallazgos.
+3. En «Repuestos y servicios que necesita la reparación», busca el repuesto o servicio, indica la cantidad y pulsa «Agregar». Verás el stock disponible.
+4. Si la pieza no está en el catálogo, descríbela en «Otras piezas».
+5. La orden pasa a «Diagnosticada» y recepción recibe un aviso con lo que pediste para preparar la cotización.

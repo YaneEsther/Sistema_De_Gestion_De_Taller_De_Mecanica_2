@@ -1,0 +1,31 @@
+---
+title: "Cotizaciones"
+description: "Cotizaciones (servicios y repuestos con ITBIS; muestra lo que pidió el mecánico y deja una nota para facturación)"
+---
+
+<Info>Acceso: Administrador, Recepcionista, Facturador</Info>
+
+## Campos
+| Campo | Tipo | Detalle |
+|---|---|---|
+| Orden de trabajo | Relación con «Órdenes de trabajo» |  |
+| Servicio / repuesto | Texto |  |
+| Total (RD$) | Número |  |
+| Estado | Lista | Pendiente, Aprobada, Rechazada |
+
+## Reglas
+- Permite filtrar «Solo mis registros de este turno».
+- Al guardar dispara acciones automáticas (cambio de estado de la orden, avisos a otros roles, stock o historial).
+- Su formulario incluye secciones especiales además de los campos básicos.
+
+## Cómo se usa
+### Preparar una cotización con lo que pidió el mecánico · Recepcionista
+1. En «Cotizaciones» → «Nuevo», elige la orden.
+2. Si el mecánico pidió repuestos o servicios en su diagnóstico, aparecen en un recuadro amarillo y se cargan solos.
+3. Revisa las cantidades y el stock, agrega una nota si hace falta y guarda.
+
+### Crear una cotización · Facturador
+1. Entra a «Cotizaciones» → «Nuevo» y elige la orden.
+2. Si el mecánico pidió repuestos o servicios, se cargan solos y puedes ajustarlos.
+3. Marca los servicios y repuestos con su cantidad: el ITBIS (18%) y el total se calculan solos.
+4. Se avisa a recepción para que la apruebe con el cliente.

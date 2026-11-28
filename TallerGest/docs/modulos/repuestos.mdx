@@ -1,0 +1,23 @@
+---
+title: "Gestión de repuestos"
+description: "Gestión de repuestos (el código se genera solo; no se permiten repuestos repetidos)"
+---
+
+<Info>Acceso: Administrador, Mecánico</Info>
+
+## Campos
+| Campo | Tipo | Detalle |
+|---|---|---|
+| Código | Texto |  |
+| Descripción | Texto |  |
+| Stock | Número |  |
+| Precio (RD$) | Número |  |
+
+## Reglas
+- No permite repetidos en **Descripción** (ignora mayúsculas, tildes y espacios).
+- Permite filtrar «Solo mis registros de este turno».
+
+## Cómo se usa
+### Consultar repuestos · Mecánico
+1. «Gestión de repuestos» muestra el stock disponible; aparece «Bajo» cuando quedan 5 o menos.
+2. Para registrar un repuesto nuevo, pulsa «Nuevo»: el código se genera solo y no se permiten repetidos.

@@ -1,0 +1,36 @@
+---
+title: "Inicio rápido"
+description: "Cómo instalar y ejecutar TallerGest"
+---
+
+<Steps>
+  <Step title="Crea la base de datos en Neon">
+    Entra a neon.com, crea un proyecto y copia la cadena de conexión (botón *Connect*). Las tablas se crean solas al iniciar el servidor.
+  </Step>
+  <Step title="Configura el archivo .env">
+    Copia `.env.example` como `.env` y completa `DATABASE_URL` (sin comillas y sin `&channel_binding=require`) y `JWT_SECRET` (un texto largo y secreto).
+  </Step>
+  <Step title="Instala y arranca">
+    ```bash
+    npm install
+    npm start
+    ```
+  </Step>
+  <Step title="Entra al sistema">
+    Abre http://localhost:3000 con el usuario `admin` y la contraseña definida en `ADMIN_PASSWORD` (por defecto `admin123`; cámbiala en *Usuarios y roles*).
+  </Step>
+</Steps>
+
+<Warning>Nunca subas el archivo `.env` a GitHub: contiene la contraseña de tu base de datos.</Warning>
+
+## Variables de entorno
+| Variable | Uso |
+|---|---|
+| `DATABASE_URL` | Cadena de conexión de Neon (obligatoria) |
+| `JWT_SECRET` | Texto secreto para firmar las sesiones (obligatorio en producción) |
+| `ADMIN_PASSWORD` | Contraseña del administrador inicial (solo si no hay usuarios) |
+| `SEED_DEMO` | `1` crea usuarios de demostración con la base vacía |
+| `APP_TZ` | Zona horaria (por defecto `America/Santo_Domingo`) |
+
+## Publicar el servidor
+Sube el proyecto a GitHub y despliégalo en Render, Railway o similar (Node 20+, comando `npm start`). Los datos y las fotos viven en Neon, así que no necesitas disco persistente: solo agrega las variables de arriba en el panel del hosting.

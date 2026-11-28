@@ -1,0 +1,25 @@
+---
+title: "Ejecución del trabajo"
+description: "Ejecución del trabajo (el mecánico solo ve sus órdenes y solo las etapas que le faltan)"
+---
+
+<Info>Acceso: Administrador, Mecánico</Info>
+
+## Campos
+| Campo | Tipo | Detalle |
+|---|---|---|
+| Orden de trabajo | Relación con «Órdenes de trabajo» |  |
+| Etapa | Lista | Repuestos, Ejecución, Finalización |
+| Notas del trabajo | Texto largo |  |
+
+## Reglas
+- Permite filtrar «Solo mis registros de este turno».
+- Al guardar dispara acciones automáticas (cambio de estado de la orden, avisos a otros roles, stock o historial).
+- Su formulario incluye secciones especiales además de los campos básicos.
+
+## Cómo se usa
+### Registrar el avance del trabajo · Mecánico
+1. Espera el aviso de que el cliente aprobó la cotización.
+2. En «Ejecución del trabajo» elige la orden: solo aparecen las aprobadas o en ejecución.
+3. Las etapas que se ofrecen dependen del estado de la orden: «Repuestos» (si esperas piezas), «Ejecución» y, cuando ya empezó, «Finalización».
+4. Con «Ejecución» la orden pasa a «En ejecución». Con «Finalización» pasa a «Finalizada», se guarda en el historial del vehículo y se avisa a facturación.

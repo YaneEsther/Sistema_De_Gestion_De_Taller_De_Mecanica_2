@@ -1,0 +1,26 @@
+---
+title: "Órdenes de trabajo"
+description: "Órdenes de trabajo (el mecánico solo ve las suyas y solo puede mirarlas, con todas sus notas)"
+---
+
+<Info>Acceso: Administrador, Recepcionista, Mecánico</Info>
+
+## Campos
+| Campo | Tipo | Detalle |
+|---|---|---|
+| N° de orden | Texto |  |
+| Cliente | Relación con «Registro de clientes» |  |
+| Vehículo | Relación con «Registro de vehículos» |  |
+| Estado | Lista | Recibida, Diagnosticada, Cotizada, Aprobada, En ejecución, Finalizada, Facturada, Pagada |
+| Fecha | Fecha |  |
+| Motivo / falla reportada | Texto largo |  |
+
+## Reglas
+- Solo lectura para: Mecánico.
+- El cliente se elige escribiendo su nombre y luego se elige uno de sus vehículos (se puede registrar otro vehículo desde el mismo formulario).
+
+## Cómo se usa
+### Ver mis órdenes y sus notas · Mecánico
+1. Entra a «Órdenes de trabajo»: solo aparecen las que te asignaron.
+2. Pulsa el ojo de una fila para ver todo: la falla que reportó el cliente, las observaciones de recepción, las fotos del vehículo y lo que se va registrando.
+3. Cuando te asignan una orden nueva recibes una notificación en la campana.
